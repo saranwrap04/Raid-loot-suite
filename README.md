@@ -1,5 +1,6 @@
 <img width="512" height="512" alt="raid_loot_suite_transparent" src="https://github.com/user-attachments/assets/66171f51-57c8-4c76-abd5-d5f9cdb768e3" />
 
+Always download zip from the code to use the latest addon version
 
 RAID LOOT SUITE  v2.1.1  -  by Saranwrap
 World of Warcraft 3.3.5a (ChromieCraft / WotLK private servers)
