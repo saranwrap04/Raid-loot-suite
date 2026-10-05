@@ -29,7 +29,7 @@ By Saranwrap
 
 
 ### LOOT SESSION
-  Queue (left)
+  **Queue (left)**
   - As master looter, opening the boss corpse/chest adds its items to the queue and posts
     "Loot from <Boss>: [item] [item]..." in raid chat (both can be turned off in Settings).
   - Add any item by hand: shift-click it into the box, or type its ID.
@@ -39,7 +39,7 @@ By Saranwrap
     link in chat, remove, Give to > Group 1-8 > player.
   - Clear finished: removes awarded, delivered, disenchanted and skipped items.
 
-  Selected item (right)
+  **Selected item (right)**
   Roll / Council     start a roll or a council vote
   End now            end the roll and pick the winner
   Award              give it to the selected player (or right-click a player)
@@ -47,7 +47,7 @@ By Saranwrap
   Skip / Remove      skip it / remove it from the queue
   Roll timer         seconds for the next roll (5-120, default 10), or /rls timer 30
 
-  Rolls
+  **Rolls**
   - MS = /roll 100, OS = /roll 99, SR = /roll 100. Any MS roll beats any OS roll.
   - Soft reserved by players in the raid: only they roll. One SR'er: they get it.
   - The timer ends the roll, with a 5-4-3-2-1 countdown in chat. The winner is announced
@@ -56,13 +56,13 @@ By Saranwrap
   - Nobody rolled and a disenchanter is set: it goes to the disenchanter.
   - Status turns to Delivered when the winner receives the item.
 
-  Raiders
+  **Raiders**
   - With Raid Loot Suite: a popup with MS / OS / Pass. The buttons do the /roll for them
     (also in a council vote), so everybody sees the rolls in chat.
   - Without it: they read the raid chat and type /roll 100 or /roll 99 (council: whisper
     ms / os / pass, or roll). Their rolls count the same way.
 
-  Loot council
+  **Loot council**
   - Raiders answer with the popup, a whisper (ms / os / pass) or a roll.
   - Council members see the answers and click Vote (click again to take it back).
     Hover a player to see who voted for them. You select the player and press Award.
