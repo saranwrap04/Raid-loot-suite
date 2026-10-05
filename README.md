@@ -1,25 +1,26 @@
 <img width="512" height="512" alt="raid_loot_suite_transparent" src="https://github.com/user-attachments/assets/66171f51-57c8-4c76-abd5-d5f9cdb768e3" />
 
-RAID LOOT SUITE v2.3.0
-Loot history, soft reserves, SR / MS / OS rolls, loot council and raid loot tables (WoW 3.3.5a).
+# RAID LOOT SUITE v2.3.0
+
+## Loot history, soft reserves, SR / MS / OS rolls, loot council and raid loot tables (WoW 3.3.5a).
 By Saranwrap
 
 
-INSTALL
+### INSTALL
   1. Close the game.
   2. Copy the "RaidLootSuite" folder into <WoW folder>\Interface\AddOns\
      (keep the "textures" folder inside it). The folder must be named exactly RaidLootSuite.
   3. Start the game.
 
 
-QUICK START
+### QUICK START
   /rls           open / close the window
   Minimap button: left-click open / close, shift-click History, right-click menu.
   Settings: button in the title bar (press Back to return).
   Try everything alone first: Settings > Test mode (fake raiders, nothing sent to chat).
 
 
-THE WINDOW
+### THE WINDOW
   Tabs: Loot Session | Soft Reserves | Loot Council | History | Loot Tables
   Drag the title bar to move it, drag the bottom-right corner to resize it
   (double-click the corner for the default size). /rls opens the last tab used.
@@ -27,7 +28,7 @@ THE WINDOW
   Most rows have a right-click menu with quick actions.
 
 
-LOOT SESSION
+### LOOT SESSION
   Queue (left)
   - As master looter, opening the boss corpse/chest adds its items to the queue and posts
     "Loot from <Boss>: [item] [item]..." in raid chat (both can be turned off in Settings).
@@ -68,7 +69,7 @@ LOOT SESSION
   - Council members need Raid Loot Suite to vote.
 
 
-SOFT RESERVES
+### SOFT RESERVES
   - Views: By item (who reserved it, queue status / winner), By player (their reserves),
     Edit list (one line per reserve: click to edit, x to delete).
   - Search box and "Only my raid" filter. Grey = not in your raid, (won) = already got it.
@@ -79,12 +80,12 @@ SOFT RESERVES
   - Announce: posts the list in raid chat, one line per item.
 
 
-LOOT COUNCIL
+### LOOT COUNCIL
   Tick who can vote (you are always on it), "Leader + assists" in one click, or add a name
   of someone not in the raid yet. Changes apply right away, also to a vote in progress.
 
 
-HISTORY
+### HISTORY
   Records item, boss, winner, date and time, raid and size/difficulty.
   - Winners come from "<player> receives loot" lines. Drops seen in the loot window show
     "Pending..." until someone loots them.
@@ -103,7 +104,7 @@ HISTORY
   - Outside the game: Tools\savedvariables_to_csv.py makes a CSV from the saved file (Python 3).
 
 
-LOOT TABLES
+### LOOT TABLES
   Every raid boss with its loot in 10 / 25 (and 10 / 25 heroic where the raid has it),
   plus "Trash mobs" (epics and better) and "Patterns & recipes".
   - Each item: type, item level, drop chance. HM = hard mode only.
@@ -115,7 +116,7 @@ LOOT TABLES
   runs on). The server can change its loot, so treat them as a guide.
 
 
-SETTINGS
+### SETTINGS
   Loot session: test mode, roll timer, announce channels (roll start, winners, countdown),
   auto-queue, post boss loot in raid chat, give with Master Loot, countdown, whisper SR,
   whisper MS / OS, disenchanter (+ give no-roll items to the disenchanter), council members.
@@ -124,14 +125,14 @@ SETTINGS
   Raid warning needs leader or assist, otherwise raid chat is used.
 
 
-TEST MODE  (Settings, minimap menu or /rls test)
+### TEST MODE  (Settings, minimap menu or /rls test)
   Six fake raiders, a few test items from your gear and ready-made soft reserves.
   Fake raiders roll, answer the council and vote. "Fake whisper" in Soft Reserves tests
   the whisper commands. Nothing is sent to chat, Master Loot is not used. Awards go into
   the history as "Test Boss" (you are asked if you want to keep them when the test stops).
 
 
-COMMANDS
+### COMMANDS
   /rls                          open / close the window
   /rls session | sr | council   open a tab
   /rls history | tables         open a tab
@@ -149,12 +150,12 @@ COMMANDS
   /raidloot works too.
 
 
-SAVED DATA
+### SAVED DATA
   WTF\Account\<ACCOUNT>\SavedVariables\RaidLootSuite.lua (shared by your characters).
   Written on logout, /reload or exit; a crash loses that session's changes.
   A roll or vote in progress does not survive a /reload.
 
 
-LINKS
+### LINKS
   GitHub:   https://github.com/saranwrap04/Raid-loot-suite
   Warperia: https://warperia.com/addon-wotlk/raid-loot-suite/
