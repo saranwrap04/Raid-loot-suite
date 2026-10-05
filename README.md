@@ -159,3 +159,14 @@ By Saranwrap
 ### LINKS
   GitHub:   https://github.com/saranwrap04/Raid-loot-suite
   Warperia: https://warperia.com/addon-wotlk/raid-loot-suite/
+
+<img width="1078" height="740" alt="Screenshot 2026-10-05 090416" src="https://github.com/user-attachments/assets/fe6024e5-eda1-4b0b-8f6b-9b52260c01e1" />
+<img width="1078" height="739" alt="Screenshot 2026-10-05 090507" src="https://github.com/user-attachments/assets/ba09fac9-0ff2-4604-8076-7f544345309a" />
+<img width="1079" height="739" alt="Screenshot 2026-10-05 090517" src="https://github.com/user-attachments/assets/d2ff915f-e988-4866-8bd7-be4142eaafa6" />
+<img width="1078" height="739" alt="Screenshot 2026-10-05 090527" src="https://github.com/user-attachments/assets/b7fa12bc-f50a-429b-aa93-77da5bde5b84" />
+<img width="1080" height="738" alt="Screenshot 2026-10-05 090538" src="https://github.com/user-attachments/assets/8b65af67-a64d-4fca-afda-c73f015e4570" />
+<img width="1079" height="738" alt="Screenshot 2026-10-05 090548" src="https://github.com/user-attachments/assets/9f19c713-5218-4f38-81be-0a24739e1818" />
+<img width="1080" height="737" alt="Screenshot 2026-10-05 090556" src="https://github.com/user-attachments/assets/f41a5b91-5c7e-4164-9e48-3d9d8515f84f" />
+<img width="678" height="294" alt="Screenshot 2026-10-05 090620" src="https://github.com/user-attachments/assets/e12f3d2c-bbda-47eb-bb0a-ccf174d04de2" />
+<img width="395" height="138" alt="Screenshot 2026-10-05 090440" src="https://github.com/user-attachments/assets/596a20f6-aeb5-4eb4-a1da-a4c8cecf524d" />
+<img width="397" height="141" alt="Screenshot 2026-10-05 090456" src="https://github.com/user-attachments/assets/3b1146f1-89bb-4a62-bdd0-20e1c9763cda" />
