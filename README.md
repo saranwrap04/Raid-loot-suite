@@ -1,4 +1,5 @@
-<img width="512" height="512" alt="raid_loot_suite_transparent" src="https://github.com/user-attachments/assets/66171f51-57c8-4c76-abd5-d5f9cdb768e3" />
+<img width="390" height="332" alt="raid_loot_suite_logo" src="https://github.com/user-attachments/assets/81bcb55f-03a5-4200-b5bd-11cfc530f546" />
+
 
 # RAID LOOT SUITE v2.3.1
 
