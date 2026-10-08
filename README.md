@@ -1,5 +1,5 @@
 <p align="center">
-<img width="390" height="332" alt="Raid Loot Suite" src="images/logo.png" />
+<img width="390" height="332" alt="raid_loot_suite_logo_wow" src="https://github.com/user-attachments/assets/50fb5953-5ff3-4907-ac61-0a0c22a2862e" />
 </p>
 
 # Raid Loot Suite
