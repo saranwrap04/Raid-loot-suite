@@ -10,15 +10,21 @@ local FRAME_W, FRAME_H = 820, 530
 local MIN_W, MIN_H = 820, 400
 local MAX_W, MAX_H = 1800, 1200
 
+-- flat dark style: dark backdrop, black borders, orange accent
 local C = {
-    bg       = { 0.05, 0.05, 0.07, 0.96 },
-    panel    = { 0.08, 0.08, 0.11, 1 },
-    border   = { 0.20, 0.20, 0.26, 1 },
-    button   = { 0.12, 0.12, 0.16, 1 },
-    accent   = { 0.31, 0.76, 0.97, 1 },
+    bg       = { 0.06, 0.06, 0.06, 0.92 },
+    panel    = { 0.10, 0.10, 0.10, 1 },
+    border   = { 0, 0, 0, 1 },
+    button   = { 0.10, 0.10, 0.10, 1 },
+    accent   = { 0.99, 0.48, 0.17, 1 },
     muted    = { 0.55, 0.55, 0.60 },
     danger   = { 0.90, 0.30, 0.30, 1 },
+    title    = { 0.10, 0.10, 0.10, 1 },
+    header   = { 0.13, 0.13, 0.13, 1 },
+    sel      = { 0.45, 0.22, 0.08, 1 },
 }
+RLT.ACCENT = "|cfffc7a2b"
+
 
 local RAID_ABBREV = {
     ["Icecrown Citadel"] = "ICC", ["Trial of the Crusader"] = "ToC",
@@ -179,6 +185,18 @@ local function SetSpec(e, spec)
     RLT:NotifyChanged()
 end
 
+-- how it was awarded, shown after MS / OS: LC = loot council, SR = soft reserve
+local METHOD_TEXT = { LC = "|cff4fc3f7LC|r", SR = "|cffc77dffSR|r" }
+local function MethodSuffix(e)
+    local m = e.method
+    if not m or (m == "SR" and e.spec == "SR") then return nil end   -- "SR SR" says nothing more
+    return METHOD_TEXT[m]
+end
+local function SetMethod(e, m)
+    e.method = (e.method ~= m) and m or nil
+    RLT:NotifyChanged()
+end
+
 local function EditField(e, field, label)
     local dialog = StaticPopup_Show("RLT_EDIT_FIELD", label)
     if dialog then
@@ -198,6 +216,10 @@ local function SortCompare(a, b)
     local va, vb
     if k == "ts" then
         va, vb = a.ts or 0, b.ts or 0
+    elseif k == "sync" then
+        va, vb = a.noSync and 1 or 0, b.noSync and 1 or 0
+    elseif k == "spec" then
+        va, vb = (a.spec or "") .. " " .. (a.method or ""), (b.spec or "") .. " " .. (b.method or "")
     else
         va, vb = tostring(a[k] or ""):lower(), tostring(b[k] or ""):lower()
     end
@@ -221,7 +243,7 @@ function UI:BuildView()
         if ok and q ~= "" then
             local hay = ((e.itemName or "") .. "\001" .. (e.boss or "") .. "\001" ..
                          (e.winner or "") .. "\001" .. (e.zone or "") .. "\001" ..
-                         (e.spec or "") .. "\001" .. (e.note or "")):lower()
+                         (e.spec or "") .. "\001" .. (e.method or "") .. "\001" .. (e.note or "")):lower()
             if not hay:find(q, 1, true) then ok = false end
         end
         if ok then view[#view + 1] = e end
@@ -235,11 +257,13 @@ end
 -- Columns in display order. "w" is the width at the minimum window size;
 -- "grow" is the share of any extra width the column gets when the window is wider.
 local COLUMNS = {
+    { key = "sync",     label = "|TInterface\\Buttons\\UI-CheckBox-Check:14:14|t", w = 18, grow = 0,
+      tip = "Sync: ticked drops are shared when other raid members sync. Untick a drop to keep it out of syncs." },
     { key = "ts",       label = "Date / Time", w = 108, grow = 0 },
-    { key = "itemName", label = "Item",        w = 232, grow = 0.45 },
+    { key = "itemName", label = "Item",        w = 200, grow = 0.45 },
     { key = "boss",     label = "Boss",        w = 140, grow = 0.25 },
     { key = "winner",   label = "Winner",      w = 108, grow = 0.15 },
-    { key = "spec",     label = "MS/OS",       w = 64,  grow = 0 },
+    { key = "spec",     label = "MS/OS",       w = 74,  grow = 0 },
     { key = "zone",     label = "Raid",        w = 85,  grow = 0.15 },
 }
 local COL_GAP, COL_START = 4, 8
@@ -270,6 +294,10 @@ local function Row_OnEnter(self)
     GameTooltip:AddDoubleLine("Raid", (e.zone or "?") .. " " .. (e.diff or ""), 0.6, 0.6, 0.6, 1, 1, 1)
     GameTooltip:AddDoubleLine("Date", date("%Y-%m-%d %H:%M:%S", e.ts), 0.6, 0.6, 0.6, 1, 1, 1)
     GameTooltip:AddDoubleLine("MS / OS", e.spec or "-", 0.6, 0.6, 0.6, 1, 1, 1)
+    if e.method then
+        GameTooltip:AddDoubleLine("Awarded by", e.method == "LC" and "Loot council" or "Soft reserve", 0.6, 0.6, 0.6, 1, 1, 1)
+    end
+    if e.noSync then GameTooltip:AddLine("Not shared in syncs", 1, 0.5, 0.5) end
     if e.note then
         GameTooltip:AddLine("Note: " .. e.note, 1, 0.82, 0, true)
     end
@@ -293,6 +321,9 @@ local function Row_OnClick(self, button)
             { text = "|cffc77dffMark as SR|r (soft reserve)", checked = e.spec == "SR", func = function() SetSpec(e, "SR") end },
             { text = "|cffd2a679Mark as DE|r (disenchanted)", checked = e.spec == "DE", func = function() SetSpec(e, "DE") end },
             { text = "Clear MS / OS", notCheckable = true, func = function() SetSpec(e, "") end },
+            { text = "|cff4fc3f7Awarded by loot council|r (LC)", checked = e.method == "LC", func = function() SetMethod(e, "LC") end },
+            { text = "|cffc77dffAwarded to a soft reserve|r (SR)", checked = e.method == "SR", func = function() SetMethod(e, "SR") end },
+            { text = "Share in syncs", checked = not e.noSync, func = function() e.noSync = (not e.noSync) or nil; RLT:NotifyChanged() end },
             { text = e.note and "Edit note" or "Add note", notCheckable = true, func = function() EditField(e, "note", "Note for " .. (e.itemName or "item") .. ":") end },
             { text = "Link in chat", notCheckable = true, disabled = not e.itemLink, func = function() if e.itemLink then ChatEdit_InsertLink(e.itemLink) end end },
             { text = "|cffff5555Delete entry|r", notCheckable = true, func = function() RLT:DeleteEntry(e.id) end },
@@ -321,10 +352,30 @@ local function CreateRow(parent, i)
 
     row.cols = {}
     for _, col in ipairs(COLUMNS) do
-        if col.key == "spec" then
-            -- clickable MS / OS tag
+        if col.key == "sync" then
+            -- ticked = shared when others sync (default); unticked = kept out of syncs
+            local cb = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
+            Size(cb, 18, 18)
+            cb:SetHitRectInsets(0, 0, 0, 0)
+            cb:SetScript("OnClick", function(self)
+                local e = row.entry
+                if not e then return end
+                e.noSync = (not self:GetChecked()) or nil
+                RLT:NotifyChanged()
+            end)
+            cb:SetScript("OnEnter", function(self)
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                GameTooltip:AddLine("Sync")
+                GameTooltip:AddLine("Ticked: this drop is shared when other raid members sync.", 1, 1, 1, true)
+                GameTooltip:AddLine("Unticked: it stays only in your history.", 1, 1, 1, true)
+                GameTooltip:Show()
+            end)
+            cb:SetScript("OnLeave", function() GameTooltip:Hide() end)
+            row.syncBox = cb
+        elseif col.key == "spec" then
+            -- clickable MS / OS tag (+ LC / SR: how it was awarded)
             local tag = CreateFrame("Button", nil, row)
-            Size(tag, 40, 16)
+            Size(tag, 56, 16)
             Backdrop(tag, C.button)
             tag:RegisterForClicks("LeftButtonUp", "RightButtonUp")
             local tfs = Text(tag, "GameFontHighlightSmall")
@@ -346,8 +397,12 @@ local function CreateRow(parent, i)
                 local e = row.entry
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 GameTooltip:AddLine("MS / OS")
-                GameTooltip:AddLine("Left-click: none > MS > OS", 1, 1, 1)
+                GameTooltip:AddLine("Left-click: none > MS > OS > SR > DE", 1, 1, 1)
                 GameTooltip:AddLine("Right-click: add / edit a note", 1, 1, 1)
+                GameTooltip:AddLine("LC = awarded by loot council, SR = awarded to a soft reserve", 0.7, 0.7, 0.7, true)
+                if e and e.method then
+                    GameTooltip:AddLine("Awarded by: " .. (e.method == "LC" and "loot council" or "soft reserve"), 1, 0.82, 0)
+                end
                 if e and e.note then GameTooltip:AddLine(" "); GameTooltip:AddLine("Note: " .. e.note, 1, 0.82, 0, true) end
                 GameTooltip:Show()
             end)
@@ -379,7 +434,10 @@ end
 local function LayoutRow(row, rowW)
     row:SetWidth(rowW)
     for _, col in ipairs(COLUMNS) do
-        if col.key == "spec" then
+        if col.key == "sync" then
+            row.syncBox:ClearAllPoints()
+            row.syncBox:SetPoint("LEFT", row, "LEFT", col.cx - 2, 0)
+        elseif col.key == "spec" then
             row.tag:ClearAllPoints()
             row.tag:SetPoint("LEFT", row, "LEFT", col.cx, 0)
         elseif col.key == "itemName" then
@@ -439,11 +497,17 @@ function UI:UpdateRows()
             row.cols.boss:SetText(e.boss or "?")
             row.cols.winner:SetText(ClassColored(e.winner, e.class))
             row.cols.zone:SetText(RaidLabel(e))
+            row.syncBox:SetChecked(not e.noSync)
             local st = SPEC_STYLE[e.spec or ""]
+            local suffix = MethodSuffix(e)
             if st then
-                row.tag.fs:SetText(st.text)
+                row.tag.fs:SetText(st.text .. (suffix and (" " .. suffix) or ""))
                 row.tag:SetBackdropColor(unpack(st.bg))
                 row.tag:SetBackdropBorderColor(unpack(st.border))
+            elseif suffix then
+                row.tag.fs:SetText(suffix)
+                row.tag:SetBackdropColor(unpack(C.button))
+                row.tag:SetBackdropBorderColor(unpack(C.border))
             else
                 row.tag.fs:SetText("|cff555555--|r")
                 row.tag:SetBackdropColor(unpack(C.button))
@@ -489,7 +553,7 @@ function UI:Refresh()
     else
         self.status:SetText(#self.view .. " shown  /  " .. total .. " total")
     end
-    if RLT.syncText then self.status:SetText("|cff4fc3f7" .. RLT.syncText .. "|r") end
+    if RLT.syncText then self.status:SetText(RLT.ACCENT .. RLT.syncText .. "|r") end
 end
 
 function RLT:OnDataChanged()
@@ -587,8 +651,9 @@ function UI:CreateOptions(parent)
         "Drag the button to move it around the minimap.", -225,
         function() return not s.minimap.hide end,
         function(v) s.minimap.hide = not v; RLT:UpdateMinimapButton() end)
-    CheckBox(o, "RLTOptAutoSync", "Sync the loot history with the raid after a login / reload",
-        "Fills in drops you missed while disconnected. The Sync button does it any time.", -270,
+    CheckBox(o, "RLTOptAutoSync", "Auto sync (after a login / reload, or when you join a raid)",
+        "Gets the loot history the raid recorded and fills in drops you missed while disconnected. " ..
+        "Untick to turn it off; the Sync button in the History still works any time.", -270,
         function() return s.autoSync end, function(v) s.autoSync = v end)
 
     -- Right column: opacity slider
@@ -675,7 +740,7 @@ function UI:ApplyOpacity()
             f:SetBackdropColor(col[1], col[2], col[3], (col[4] or 1) * a)
         end
     end
-    if self.titleBg then self.titleBg:SetTexture(0.09, 0.09, 0.12, a) end
+    if self.titleBg then self.titleBg:SetTexture(C.title[1], C.title[2], C.title[3], a) end
 end
 
 local function AddPanel(f, col)
@@ -715,7 +780,7 @@ function UI:Create()
     bar:SetHeight(30)
     local barBg = bar:CreateTexture(nil, "BACKGROUND")
     barBg:SetAllPoints()
-    barBg:SetTexture(0.09, 0.09, 0.12, 1)
+    barBg:SetTexture(unpack(C.title))
     self.titleBg = barBg
     local line = bar:CreateTexture(nil, "BORDER")
     line:SetPoint("BOTTOMLEFT"); line:SetPoint("BOTTOMRIGHT"); line:SetHeight(1)
@@ -784,7 +849,7 @@ function UI:Create()
     header:SetPoint("TOPLEFT", 10, -70)
     header:SetPoint("TOPRIGHT", -10, -70)
     header:SetHeight(22)
-    local headerCol = { 0.10, 0.10, 0.14, 1 }
+    local headerCol = C.header
     Backdrop(header, headerCol)
     AddPanel(header, headerCol)
     self.header = header
@@ -795,6 +860,14 @@ function UI:Create()
         local fs = Text(h, "GameFontNormalSmall")
         fs:SetPoint("LEFT")
         h.fs, h.key, h.label, h.col = fs, col.key, col.label, col
+        if col.tip then
+            h:SetScript("OnEnter", function(self)
+                GameTooltip:SetOwner(self, "ANCHOR_TOP")
+                GameTooltip:SetText(col.tip, 1, 1, 1, 1, true)
+                GameTooltip:Show()
+            end)
+            h:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        end
         h:SetScript("OnClick", function()
             if UI.sortKey == col.key then
                 UI.sortAsc = not UI.sortAsc
@@ -901,7 +974,7 @@ function UI:FillExport()
     self.exportBox:SetCursorPosition(0)
     self.exportInfo:SetText(n .. " entries  -  click in the box, press Ctrl+C, then paste into Excel, Google Sheets or Discord.")
     for fmt, b in pairs(self.formatBtns) do
-        if fmt == self.exportFormat then b:SetBackdropColor(0.16, 0.32, 0.42, 1) else b:SetBackdropColor(unpack(C.button)) end
+        if fmt == self.exportFormat then b:SetBackdropColor(unpack(C.sel)) else b:SetBackdropColor(unpack(C.button)) end
     end
 end
 
@@ -1012,7 +1085,7 @@ function UI:CreateImport()
     help:SetPoint("TOPLEFT", 12, -36)
     help:SetWidth(636)
     help:SetJustifyH("LEFT")
-    help:SetText("Paste below with |cff4fc3f7Ctrl+V|r, then click Import. Accepted:\n" ..
+    help:SetText("Paste below with " .. RLT.ACCENT .. "Ctrl+V|r, then click Import. Accepted:\n" ..
         "|cff888888-|r Cells copied from Excel / Google Sheets (keep the header row: Date, Time, Raid, Boss, Item, Winner, MS/OS, Note...)\n" ..
         "|cff888888-|r CSV content (comma or semicolon), or this addon's Plain text / Discord export\n" ..
         "|cff888888-|r Simple lines:  |cffccccccItem -> Player|r   or   |cffccccccBoss | Item -> Player MS|r\n" ..

@@ -132,6 +132,7 @@ function RLT:MergeSyncedEntry(e, from)
                 -- already have it: take the spec / note if ours has none
                 if not x.spec and e.spec then x.spec = e.spec end
                 if not x.note and e.note then x.note = e.note end
+                if not x.method and e.method then x.method = e.method end
                 return "dupe"
             end
             if not x.winner then
@@ -139,6 +140,7 @@ function RLT:MergeSyncedEntry(e, from)
                 x.winner, x.class, x.pending = e.winner, e.class, nil
                 x.spec = x.spec or e.spec
                 x.note = x.note or e.note
+                x.method = x.method or e.method
                 x.synced = from
                 return "filled"
             end
@@ -149,7 +151,7 @@ function RLT:MergeSyncedEntry(e, from)
         itemLink = link or (QualityColor(e.quality) .. "|Hitem:" .. e.itemID .. ":0:0:0:0:0:0:0:80|h[" .. e.itemName .. "]|h|r"),
         itemID = e.itemID, itemName = e.itemName, quality = e.quality,
         winner = e.winner, class = e.class, boss = e.boss or RLT.UNKNOWN, zone = e.zone or "?", diff = e.diff or "",
-        ts = e.ts, spec = e.spec, note = e.note, recorder = from, synced = from,
+        ts = e.ts, spec = e.spec, note = e.note, method = e.method, recorder = from, synced = from,
     })
     return "added"
 end
@@ -177,7 +179,8 @@ end
 local function EntriesSince(since)
     local list = {}
     for _, e in ipairs(RLT.db.entries) do
-        if e.winner and e.itemID and (e.ts or 0) >= since and not e.test then list[#list + 1] = e end
+        -- e.noSync: unticked in the History (Sync column): never shared
+        if e.winner and e.itemID and (e.ts or 0) >= since and not e.test and not e.noSync then list[#list + 1] = e end
     end
     return list
 end
@@ -198,7 +201,8 @@ function RLT:OnSyncMessage(msg, channel, sender)
         local list = EntriesSince(tonumber(f[2]) or 0)
         for _, e in ipairs(list) do
             Send(table.concat({ "E", e.itemID, e.quality or 4, Clean(e.itemName), Clean(e.winner), Clean(e.class),
-                Clean(e.boss), Clean(e.zone), Clean(e.diff), e.ts or 0, Clean(e.spec), Clean(e.note):sub(1, 60) }, "~"),
+                Clean(e.boss), Clean(e.zone), Clean(e.diff), e.ts or 0, Clean(e.spec), Clean(e.note):sub(1, 60),
+                Clean(e.method) }, "~"),
                 "WHISPER", sender)
         end
         Send("END~" .. #list, "WHISPER", sender)
@@ -210,6 +214,7 @@ function RLT:OnSyncMessage(msg, channel, sender)
             itemID = tonumber(f[2]), quality = tonumber(f[3]) or 4, itemName = f[4], winner = f[5],
             class = opt(f[6]), boss = opt(f[7]), zone = opt(f[8]), diff = opt(f[9]),
             ts = (tonumber(f[10]) or 0) + (offer.offset or 0), spec = opt(f[11]), note = opt(f[12]),
+            method = opt(f[13]),
         }
         if not e.itemID or not e.winner or e.winner == "" then return end
         local r = self:MergeSyncedEntry(e, sender)

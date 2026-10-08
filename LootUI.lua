@@ -258,7 +258,7 @@ function LUI:Create()
     header:SetPoint("TOPLEFT", bList, "TOPRIGHT", 26, 0)
     header:SetPoint("RIGHT", f, "RIGHT", -34, 0)
     header:SetHeight(20)
-    w_.Backdrop(header, { 0.10, 0.10, 0.14, 1 })
+    w_.Backdrop(header, w_.C.header)
     -- clickable column headers: click to sort, click again to reverse
     self.headers = {}
     local function Head(key, label, justify)
@@ -410,7 +410,7 @@ function LUI:Refresh()
     for _, m in ipairs(raid.modes) do avail[m] = true end
     for m, b in pairs(self.modeBtns) do
         if avail[m] then b:Show() else b:Hide() end
-        b:SetBackdropColor(unpack(m == self.mode and { 0.12, 0.32, 0.42, 1 } or w_.C.button))
+        b:SetBackdropColor(unpack(m == self.mode and w_.C.sel or w_.C.button))
     end
 
     -- bosses

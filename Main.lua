@@ -79,7 +79,7 @@ function Main:Create()
     bar:SetFrameLevel(f:GetFrameLevel() + 40)
     local bg = bar:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints()
-    bg:SetTexture(0.09, 0.09, 0.12, 1)
+    bg:SetTexture(unpack(C.title))
     w_.UI.titleBg = bg -- follows the opacity setting
     local line = bar:CreateTexture(nil, "BORDER")
     line:SetPoint("BOTTOMLEFT"); line:SetPoint("BOTTOMRIGHT"); line:SetHeight(1)
@@ -175,7 +175,7 @@ function Main:ShowSettingsPage(which)
     local C = W().C
     for key, o in pairs(self.settingsFrames) do
         if key == which then o:Show() else o:Hide() end
-        self.subTabs[key]:SetBackdropColor(unpack(key == which and { 0.12, 0.32, 0.42, 1 } or C.button))
+        self.subTabs[key]:SetBackdropColor(unpack(key == which and C.sel or C.button))
     end
 end
 
@@ -204,10 +204,10 @@ function RLT:ShowTab(key, sub)
     end
     Main.current = key
     for k, b in pairs(Main.tabs) do
-        b:SetBackdropColor(unpack(k == key and { 0.12, 0.32, 0.42, 1 } or C.button))
+        b:SetBackdropColor(unpack(k == key and C.sel or C.button))
     end
     Main.settingsBtn:SetText(key == "settings" and "Back" or "Settings")
-    Main.settingsBtn:SetBackdropColor(unpack(key == "settings" and { 0.12, 0.32, 0.42, 1 } or C.button))
+    Main.settingsBtn:SetBackdropColor(unpack(key == "settings" and C.sel or C.button))
 end
 
 local function Toggle(key)

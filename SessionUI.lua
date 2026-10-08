@@ -104,7 +104,7 @@ local function Window(name, title, w, h, navKey)
     bar:SetHeight(30)
     local bg = bar:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints()
-    bg:SetTexture(0.09, 0.09, 0.12, 1)
+    bg:SetTexture(unpack(w_.C.title))
     local line = bar:CreateTexture(nil, "BORDER")
     line:SetPoint("BOTTOMLEFT"); line:SetPoint("BOTTOMRIGHT"); line:SetHeight(1)
     line:SetTexture(w_.C.accent[1], w_.C.accent[2], w_.C.accent[3], 0.6)
@@ -573,7 +573,7 @@ function SUI:CreateSession()
     header:SetPoint("TOPLEFT", 0, -112)
     header:SetPoint("TOPRIGHT", -22, -112)
     header:SetHeight(20)
-    w_.Backdrop(header, { 0.10, 0.10, 0.14, 1 })
+    w_.Backdrop(header, w_.C.header)
     for _, h in ipairs({ { 9, "Player" }, { 153, "Response" }, { 227, "Roll" }, { 281, "Votes" } }) do
         local fs = w_.Text(header, "GameFontNormalSmall")
         fs:SetPoint("LEFT", h[1], 0)
@@ -870,7 +870,7 @@ function SUI:Refresh()
         local srs = (item.srs and #item.srs > 0) and item.srs or RLT:GetSRs(item.itemID, item.name, true)
         if #srs > 0 then info[#info + 1] = "|cffc77dffSoft reserved by:|r " .. table.concat(srs, ", ") end
         if item.status == "ROLLING" and item.endsAt then
-            info[#info + 1] = "|cff4fc3f7" .. math.max(0, item.endsAt - time()) .. " seconds left|r" ..
+            info[#info + 1] = RLT.ACCENT .. math.max(0, item.endsAt - time()) .. " seconds left|r" ..
                 (item.srMode and "  (SR'ers only)" or "") .. (item.restrict and ("  (reroll: " .. table.concat(item.restrict, ", ") .. ")") or "")
         elseif item.status == "COUNCIL" then
             info[#info + 1] = "|cffc77dffCouncil:|r " .. table.concat(item.council or {}, ", ")
@@ -1188,7 +1188,7 @@ function SUI:CreateSR()
     header:SetPoint("TOPLEFT", 12, -102)
     header:SetPoint("TOPRIGHT", -12, -102)
     header:SetHeight(20)
-    w_.Backdrop(header, { 0.10, 0.10, 0.14, 1 })
+    w_.Backdrop(header, w_.C.header)
     local h1 = w_.Text(header, "GameFontNormalSmall"); h1:SetPoint("LEFT", 9, 0)
     local h2 = w_.Text(header, "GameFontNormalSmall"); h2:SetPoint("LEFT", 236, 0)
     local h3 = w_.Text(header, "GameFontNormalSmall"); h3:SetPoint("RIGHT", -34, 0)
@@ -1355,7 +1355,7 @@ function SUI:RefreshSR()
     local w_ = W()
     local view = self.srView or "item"
     for key, b in pairs(self.srTabs) do
-        b:SetBackdropColor(unpack(key == view and { 0.12, 0.32, 0.42, 1 } or w_.C.button))
+        b:SetBackdropColor(unpack(key == view and w_.C.sel or w_.C.button))
     end
     for _, v in ipairs(SR_VIEWS) do
         if v.key == view then self.srHead[1]:SetText(v.cols[1]); self.srHead[2]:SetText(v.cols[2]) end

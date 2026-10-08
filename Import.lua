@@ -174,6 +174,7 @@ local function BuildEntry(r)
         zone = (not Blank(r.zone)) and Trim(r.zone) or "Imported",
         diff = Trim(r.diff) or "",
         spec = NormalizeSpec(r.spec),
+        method = ({ ["loot council"] = "LC", lc = "LC", council = "LC", ["soft reserve"] = "SR", sr = "SR" })[strlower(Trim(r.method) or "")],
         note = (not Blank(note)) and note or nil,
         imported = true,
         recorder = "Import",
@@ -220,9 +221,10 @@ local HEADER_ALIASES = {
     ["ms/os"] = "spec", ["ms / os"] = "spec", ["msos"] = "spec", ["spec"] = "spec", ["type"] = "spec",
     ["note"] = "note", ["notes"] = "note", ["comment"] = "note", ["commentaire"] = "note",
     ["wowhead"] = "wowhead", ["link"] = "wowhead", ["url"] = "wowhead", ["lien"] = "wowhead",
+    ["awarded by"] = "method", ["method"] = "method",
 }
 -- Column order of this addon's CSV export, used when there is no header row.
-local DEFAULT_ORDER = { "date", "time", "zone", "diff", "boss", "item", "itemid", "winner", "class", "spec", "note", "wowhead" }
+local DEFAULT_ORDER = { "date", "time", "zone", "diff", "boss", "item", "itemid", "winner", "class", "spec", "note", "wowhead", "method" }
 
 local function ParseDelimited(lines, delim)
     local out, failed = {}, 0

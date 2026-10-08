@@ -15,9 +15,9 @@ RLT.FOLDER = ADDON_NAME or "RaidLootSuite"
 RLT.MEDIA = "Interface\\AddOns\\" .. RLT.FOLDER .. "\\textures\\"
 
 RLT.NAME    = "Raid Loot Suite"
-RLT.VERSION = "2.3.1"
+RLT.VERSION = "2.5.0"
 RLT.AUTHOR  = "Saranwrap"
-RLT.PREFIX  = "|cff4fc3f7Raid Loot Suite|r"
+RLT.PREFIX  = "|cfffc7a2bRaid Loot Suite|r"
 RLT.TRASH   = "Trash"
 RLT.UNKNOWN = "Unknown"
 
@@ -473,13 +473,20 @@ function RLT:BuildExport(entries, fmt)
     end)
 
     local lines = {}
+    -- "MS, LC": the tag + how it was awarded (LC = loot council, SR = soft reserve)
+    local function Tag(e)
+        local m = e.method and not (e.method == "SR" and e.spec == "SR") and e.method or nil
+        if e.spec and m then return e.spec .. ", " .. m end
+        return e.spec or m
+    end
     if fmt == "csv" then
-        lines[1] = "Date,Time,Raid,Size,Boss,Item,ItemID,Winner,Class,MS/OS,Note,Wowhead"
+        lines[1] = "Date,Time,Raid,Size,Boss,Item,ItemID,Winner,Class,MS/OS,Note,Wowhead,Awarded by"
         for _, e in ipairs(list) do
             lines[#lines + 1] = table.concat({
                 CSV(date("%Y-%m-%d", e.ts)), CSV(date("%H:%M:%S", e.ts)), CSV(e.zone), CSV(e.diff),
                 CSV(e.boss), CSV(e.itemName), CSV(e.itemID or ""), CSV(e.winner or "Pending"),
                 CSV(e.class or ""), CSV(e.spec or ""), CSV(e.note or ""), CSV(WowheadURL(e.itemID)),
+                CSV(e.method == "LC" and "Loot council" or (e.method == "SR" and "Soft reserve") or ""),
             }, ",")
         end
     elseif fmt == "discord" then
@@ -497,14 +504,14 @@ function RLT:BuildExport(entries, fmt)
             end
             local itemTxt = e.itemID and string.format("[%s](<%s>)", e.itemName or "?", WowheadURL(e.itemID)) or (e.itemName or "?")
             lines[#lines + 1] = string.format("- %s -> %s%s%s", itemTxt,
-                e.winner or "Pending", e.spec and (" **(" .. e.spec .. ")**") or "", e.note and (" - _" .. e.note .. "_") or "")
+                e.winner or "Pending", Tag(e) and (" **(" .. Tag(e) .. ")**") or "", e.note and (" - _" .. e.note .. "_") or "")
         end
     else -- text
         for _, e in ipairs(list) do
             lines[#lines + 1] = string.format("[%s] %s %s | %s | %s -> %s%s%s",
                 date("%Y-%m-%d %H:%M", e.ts), e.zone or "?", e.diff or "", e.boss or "?",
                 e.itemName or "?", e.winner or "Pending",
-                e.spec and (" (" .. e.spec .. ")") or "", e.note and (" - " .. e.note) or "")
+                Tag(e) and (" (" .. Tag(e) .. ")") or "", e.note and (" - " .. e.note) or "")
         end
     end
     return table.concat(lines, "\n"), #list

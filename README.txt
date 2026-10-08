@@ -1,4 +1,4 @@
-RAID LOOT SUITE v2.3.1
+RAID LOOT SUITE v2.5.0
 Loot history, soft reserves, SR / MS / OS rolls, loot council and raid loot tables (WoW 3.3.5a).
 By Saranwrap
 
@@ -93,9 +93,14 @@ HISTORY
   - Row: hover = tooltip, shift-click = link, ctrl-click = try on,
     right-click = edit winner / boss / note, mark as MS / OS / SR / DE, delete.
   - Tag: left-click cycles none > MS > OS > SR > DE, right-click adds a note.
+    Next to MS / OS: LC = awarded by the loot council, SR = went to a player who soft
+    reserved it (set automatically, or from the right-click menu).
+  - Sync column (tick box at the start of each row, ticked by default): untick a drop to
+    keep it out of syncs; it stays only in your history.
   - Sync: gets the loot other raid members recorded in the last 7 days and fills in what
-    you missed (disconnected, too far away). They need Raid Loot Suite. It also runs once
-    after a login or /reload in a raid.
+    you missed (disconnected, too far away). They need Raid Loot Suite. Auto sync also runs
+    it once after a login, a /reload or when you join a raid (turn it off in Settings >
+    History & window).
   - Export: CSV (Excel / Google Sheets), plain text or Discord (what is shown, filters apply).
   - Import: Excel / Google Sheets cells with the header row, CSV, this addon's exports, or
     lines like  Item -> Player  /  Boss | Item -> Player MS
@@ -119,7 +124,7 @@ SETTINGS
   auto-queue, post boss loot in raid chat, give with Master Loot, countdown, whisper SR,
   whisper MS / OS, disenchanter (+ give no-roll items to the disenchanter), council members.
   History & window: minimum quality, raids only, trash drops, chat line when loot is
-  recorded, minimap button, sync after login, window opacity, links.
+  recorded, minimap button, auto sync, window opacity, links.
   Raid warning needs leader or assist, otherwise raid chat is used.
 
 

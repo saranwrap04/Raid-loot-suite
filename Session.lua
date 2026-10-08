@@ -685,13 +685,14 @@ function RLT:GiveMasterLoot(item, winner)
 end
 
 -- Records the item in the loot history (fills the drop seen in the loot window if there is one).
-function RLT:RecordAward(item, winner, spec, note)
+-- method: "LC" (loot council) or "SR" (soft reserve), shown next to MS / OS in the history
+function RLT:RecordAward(item, winner, spec, note, method)
     local now = time()
     local entries = self.db.entries
     local function fill(e)
         e.pending, e.delivered = nil, nil
         e.winner, e.class, e.spec, e.awarded = winner, self:GetClassForName(winner), spec, true
-        e.note, e.qid = note, item.qid
+        e.note, e.qid, e.method = note, item.qid, method
         if item.test then e.test = true; e.note = (note and (note .. " - ") or "") .. "test" end
         self:NotifyChanged()
         return e
@@ -711,7 +712,7 @@ function RLT:RecordAward(item, winner, spec, note)
         spec = spec, note = note, awarded = true,
     })
     if e then
-        e.qid = item.qid
+        e.qid, e.method = item.qid, method
         if item.test then e.test = true; e.note = (note and (note .. " - ") or "") .. "test" end
     end
     return e
@@ -731,10 +732,20 @@ function RLT:Award(qid, winner, spec, roll, reason)
     self:Announce(format("%s goes to %s%s", item.link, winner, how and (" (" .. how .. ")") or ""), "result")
     self:SendComm("AWARD", qid, winner, spec or "")
     local note = item.mode == "council" and "Council" or (roll and ("Roll " .. roll)) or reason
-    if spec == "MS" or spec == "OS" or spec == "SR" then
-        self:RecordAward(item, winner, spec, note)
+    -- how it was awarded: loot council, or to a player who soft reserved it
+    local method
+    if item.mode == "council" then
+        method = "LC"
     else
-        self:RecordAward(item, winner, nil, note)
+        for _, n in ipairs(item.srs or {}) do
+            if strlower(n) == strlower(winner) then method = "SR" break end
+        end
+        if spec == "SR" then method = "SR" end
+    end
+    if spec == "MS" or spec == "OS" or spec == "SR" then
+        self:RecordAward(item, winner, spec, note, method)
+    else
+        self:RecordAward(item, winner, nil, note, method)
     end
     if self.db.settings.autoAward and self:GiveMasterLoot(item, winner) then
         self:Print(item.link .. " given to " .. winner .. " with Master Loot.")
