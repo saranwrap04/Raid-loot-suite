@@ -15,7 +15,7 @@ RLT.FOLDER = ADDON_NAME or "RaidLootSuite"
 RLT.MEDIA = "Interface\\AddOns\\" .. RLT.FOLDER .. "\\textures\\"
 
 RLT.NAME    = "Raid Loot Suite"
-RLT.VERSION = "2.5.0"
+RLT.VERSION = "2.6.2"
 RLT.AUTHOR  = "Saranwrap"
 RLT.PREFIX  = "|cfffc7a2bRaid Loot Suite|r"
 RLT.TRASH   = "Trash"
@@ -295,18 +295,136 @@ function RLT:AddEntry(e)
     return e
 end
 
+-- Called before a drop is changed by hand. Keeps the first winner (so a sync still
+-- recognises the drop after the winner was changed) and the time of the change
+-- (so a sync keeps the newest version).
+function RLT:MarkEdited(e)
+    if e.winner and not e.orig then e.orig = e.winner end
+    e.edited = time()
+end
+
+-- Names a drop is known by: its winner and its first winner, in lower case.
+function RLT:DropNames(e)
+    local a = e.winner and strlower(e.winner) or nil
+    local b = e.orig and strlower(e.orig) or nil
+    if b == a then b = nil end
+    return a, b
+end
+
+-- Same drop: same item, within the time window, and a winner (or first winner) in common.
+function RLT:SameDrop(x, e, window)
+    if x.itemID ~= e.itemID or math.abs((x.ts or 0) - (e.ts or 0)) > (window or 900) then return false end
+    local x1, x2 = self:DropNames(x)
+    local e1, e2 = self:DropNames(e)
+    if not x1 or not e1 then return false end
+    return x1 == e1 or (x2 and (x2 == e1 or x2 == e2)) or (e2 and e2 == x1) or false
+end
+
+-- Copies of the same drop (for instance from a sync before the winner was changed).
+-- Returns a set of the entries to delete: the most recently changed copy is kept.
+function RLT:FindDuplicates()
+    local byItem, dup = {}, {}
+    for _, e in ipairs(self.db.entries) do
+        if e.itemID and e.winner then
+            local list = byItem[e.itemID]
+            if not list then list = {}; byItem[e.itemID] = list end
+            list[#list + 1] = e
+        end
+    end
+    -- keep the copy changed last, otherwise the one with more details
+    local function Score(e)
+        return (e.edited or 0) * 10 + (e.spec and 1 or 0) + (e.note and 1 or 0) + (e.method and 1 or 0)
+    end
+    for _, list in pairs(byItem) do
+        for i = 1, #list do
+            local a = list[i]
+            if not dup[a] then
+                for j = i + 1, #list do
+                    local b = list[j]
+                    if not dup[b] and self:SameDrop(a, b) then
+                        if Score(b) > Score(a) then
+                            dup[a] = true
+                            a = b
+                        else
+                            dup[b] = true
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return dup
+end
+
 function RLT:GetEntryById(id)
     for i, e in ipairs(self.db.entries) do
         if e.id == id then return e, i end
     end
 end
 
+-- Deleted drops are remembered for 14 days so a sync (last 7 days) does not bring them back.
+local TOMBSTONE_DAYS = 14
+local function Tombstone(db, e)
+    if not e.itemID or not e.ts or time() - e.ts > TOMBSTONE_DAYS * 86400 then return end
+    db.deleted = db.deleted or {}
+    tinsert(db.deleted, { itemID = e.itemID, winner = e.winner and strlower(e.winner) or nil, ts = e.ts })
+end
+
+function RLT:PruneTombstones()
+    local d = self.db.deleted
+    if not d then return end
+    local limit = time() - TOMBSTONE_DAYS * 86400
+    for i = #d, 1, -1 do
+        if (d[i].ts or 0) < limit then tremove(d, i) end
+    end
+end
+
+function RLT:IsDeletedDrop(itemID, winner, ts, window)
+    local d = self.db.deleted
+    if not d or not ts then return false end
+    local lw = winner and strlower(winner) or nil
+    for _, t in ipairs(d) do
+        if t.itemID == itemID and math.abs(t.ts - ts) <= (window or 900) and (not t.winner or t.winner == lw) then
+            return true
+        end
+    end
+    return false
+end
+
 function RLT:DeleteEntry(id)
-    local _, i = self:GetEntryById(id)
-    if i then tremove(self.db.entries, i); self:NotifyChanged() end
+    local e, i = self:GetEntryById(id)
+    if i then
+        Tombstone(self.db, e)
+        tremove(self.db.entries, i)
+        self:NotifyChanged()
+    end
+end
+
+-- Deletes every entry for which test(e) is true. Returns how many were deleted.
+function RLT:DeleteWhere(test)
+    local entries, n = self.db.entries, 0
+    for i = #entries, 1, -1 do
+        local e = entries[i]
+        if test(e) then
+            Tombstone(self.db, e)
+            tremove(entries, i)
+            n = n + 1
+        end
+    end
+    if n > 0 then self:NotifyChanged() end
+    return n
+end
+
+function RLT:CountWhere(test)
+    local n = 0
+    for _, e in ipairs(self.db.entries) do
+        if test(e) then n = n + 1 end
+    end
+    return n
 end
 
 function RLT:ClearAll()
+    for _, e in ipairs(self.db.entries) do Tombstone(self.db, e) end
     wipe(self.db.entries)
     self:NotifyChanged()
     self:Print("All loot history deleted.")
@@ -542,6 +660,9 @@ function RLT:ADDON_LOADED(name)
     db.entries = db.entries or {}
     db.settings = db.settings or {}
     db.nextId = db.nextId or 1
+    db.deleted = db.deleted or {}
+    self.db = db
+    self:PruneTombstones()
     CopyDefaults(DEFAULTS, db.settings)
     -- v1.2: "Record trash drops" is now on by default (also for existing installs)
     if (db.settingsVersion or 1) < 2 then
@@ -622,6 +743,9 @@ SlashCmdList["RAIDLOOTSUITE"] = function(msg)
         RLT:UpdateMinimapButton()
     elseif cmd == "clear" then
         StaticPopup_Show("RLT_CONFIRM_CLEAR")
+    elseif cmd == "delete" then
+        RLT:ShowTab("history")
+        if RLT.UI.ShowDeleteMenu then RLT.UI:ShowDeleteMenu() end
     elseif cmd == "add" then
         -- /rls add [Item Link] PlayerName [Boss name]
         local link, rest = msg:match("^%S+%s+(|c%x+|Hitem:.-|h.-|h|r)%s*(.*)$")
@@ -692,6 +816,7 @@ SlashCmdList["RAIDLOOTSUITE"] = function(msg)
         RLT:Print("  /rls minimap - show / hide the minimap button")
         RLT:Print("  /rls test - test mode on / off (fake raiders, soft reserves and rolls)")
         RLT:Print("  /rls testentry - add a sample entry to the history")
+        RLT:Print("  /rls delete - delete part of the history (by raid, raid night, day, age...)")
         RLT:Print("  /rls clear - delete all history")
     end
 end

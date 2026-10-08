@@ -9,7 +9,7 @@
       REQ~since                 to RAID/PARTY: who has loot recorded since <since>?
       HAVE~count~now            whisper back: I have <count> entries (+ my clock)
       SEND~since                whisper: please send me your entries since <since>
-      E~itemID~q~name~winner~class~boss~zone~diff~ts~spec~note
+      E~itemID~q~name~winner~class~boss~zone~diff~ts~spec~note~method~firstWinner~editedAt
       END~count                 done
     Only two players (the ones with the most entries) are asked to send, to
     keep the traffic low. Messages are sent a few per second.
@@ -79,7 +79,7 @@ function RLT:StartSync(quiet)
         if not quiet then self:Print("Sync: already running.") end
         return
     end
-    sync = { since = time() - SYNC_DAYS * 86400, offers = {}, asked = {}, added = 0, filled = 0, quiet = quiet }
+    sync = { since = time() - SYNC_DAYS * 86400, offers = {}, asked = {}, added = 0, filled = 0, updated = 0, quiet = quiet }
     Send("REQ~" .. sync.since, chan)
     if not quiet then self:Print("Sync: asking the raid for its loot history...") end
     self:SyncStatus("Sync: asking the raid...")
@@ -111,8 +111,9 @@ function RLT:FinishSync()
     if not sync or sync.done then return end
     sync.done = true
     local msg = "Sync done: " .. sync.added .. " new item(s)" ..
-        (sync.filled > 0 and (", " .. sync.filled .. " winner(s) filled in") or "") .. "."
-    if not sync.quiet or sync.added + sync.filled > 0 then self:Print(msg) end
+        (sync.filled > 0 and (", " .. sync.filled .. " winner(s) filled in") or "") ..
+        (sync.updated > 0 and (", " .. sync.updated .. " drop(s) updated with newer changes") or "") .. "."
+    if not sync.quiet or sync.added + sync.filled + sync.updated > 0 then self:Print(msg) end
     self:SyncStatus(nil)
 end
 
@@ -124,34 +125,63 @@ local function QualityColor(q)
     return "|c" .. (hex[q] or "ffa335ee")
 end
 
+-- Takes the details of e (a newer version of the same drop) into x.
+local function TakeNewer(x, e, from)
+    local changed = x.winner ~= e.winner or x.spec ~= e.spec or x.note ~= e.note or x.method ~= e.method
+        or (e.boss and x.boss ~= e.boss)
+    x.winner, x.class, x.pending = e.winner, e.class or x.class, nil
+    x.spec, x.note, x.method = e.spec, e.note, e.method
+    if e.boss then x.boss = e.boss end
+    x.orig = x.orig or e.orig
+    x.edited = e.edited
+    if changed then x.synced = from end
+    return changed
+end
+
 function RLT:MergeSyncedEntry(e, from)
-    local lw = strlower(e.winner)
+    local match
+    -- 1. the same drop: same item, same time, a winner (or first winner) in common
     for _, x in ipairs(self.db.entries) do
-        if x.itemID == e.itemID and math.abs((x.ts or 0) - e.ts) <= MATCH_WINDOW then
-            if x.winner and strlower(x.winner) == lw then
-                -- already have it: take the spec / note if ours has none
-                if not x.spec and e.spec then x.spec = e.spec end
-                if not x.note and e.note then x.note = e.note end
-                if not x.method and e.method then x.method = e.method end
-                return "dupe"
-            end
-            if not x.winner then
-                -- a drop we saw in the loot window but never saw who got it
-                x.winner, x.class, x.pending = e.winner, e.class, nil
-                x.spec = x.spec or e.spec
-                x.note = x.note or e.note
-                x.method = x.method or e.method
-                x.synced = from
-                return "filled"
-            end
+        if x.winner and self:SameDrop(x, e, MATCH_WINDOW) then
+            -- prefer the copy with exactly the same winner
+            if strlower(x.winner) == strlower(e.winner) then match = x break end
+            match = match or x
         end
     end
+    if match then
+        local x = match
+        if (e.edited or 0) > (x.edited or 0) then
+            -- they changed it after us (or we never changed it): their version wins
+            if TakeNewer(x, e, from) then return "updated" end
+            return "dupe"
+        end
+        -- ours is newer: only take what we do not have
+        if not x.spec and e.spec then x.spec = e.spec end
+        if not x.note and e.note then x.note = e.note end
+        if not x.method and e.method then x.method = e.method end
+        if not x.orig and e.orig and strlower(e.orig) ~= strlower(x.winner) then x.orig = e.orig end
+        return "dupe"
+    end
+    -- 2. a drop we saw in the loot window but never saw who got it
+    for _, x in ipairs(self.db.entries) do
+        if not x.winner and x.itemID == e.itemID and math.abs((x.ts or 0) - e.ts) <= MATCH_WINDOW then
+            x.winner, x.class, x.pending = e.winner, e.class, nil
+            x.spec = x.spec or e.spec
+            x.note = x.note or e.note
+            x.method = x.method or e.method
+            x.orig, x.edited = e.orig, e.edited
+            x.synced = from
+            return "filled"
+        end
+    end
+    if self:IsDeletedDrop(e.itemID, e.winner, e.ts, MATCH_WINDOW) then return "deleted" end
     local _, link = GetItemInfo(e.itemID)
     self:AddEntryQuiet({
         itemLink = link or (QualityColor(e.quality) .. "|Hitem:" .. e.itemID .. ":0:0:0:0:0:0:0:80|h[" .. e.itemName .. "]|h|r"),
         itemID = e.itemID, itemName = e.itemName, quality = e.quality,
         winner = e.winner, class = e.class, boss = e.boss or RLT.UNKNOWN, zone = e.zone or "?", diff = e.diff or "",
         ts = e.ts, spec = e.spec, note = e.note, method = e.method, recorder = from, synced = from,
+        orig = e.orig, edited = e.edited,
     })
     return "added"
 end
@@ -199,11 +229,15 @@ function RLT:OnSyncMessage(msg, channel, sender)
         sync.offers[sender] = { count = tonumber(f[2]) or 0, offset = time() - (tonumber(f[3]) or time()) }
     elseif cmd == "SEND" then
         local list = EntriesSince(tonumber(f[2]) or 0)
+        local MAX = 250 - #PREFIX
         for _, e in ipairs(list) do
-            Send(table.concat({ "E", e.itemID, e.quality or 4, Clean(e.itemName), Clean(e.winner), Clean(e.class),
-                Clean(e.boss), Clean(e.zone), Clean(e.diff), e.ts or 0, Clean(e.spec), Clean(e.note):sub(1, 60),
-                Clean(e.method) }, "~"),
-                "WHISPER", sender)
+            local f = { "E", e.itemID, e.quality or 4, Clean(e.itemName), Clean(e.winner), Clean(e.class),
+                Clean(e.boss), Clean(e.zone), Clean(e.diff), e.ts or 0, Clean(e.spec), "",
+                Clean(e.method), Clean(e.orig), e.edited or "" }
+            -- the note gets what is left of the message, so the fields after it are never cut off
+            local room = MAX - #table.concat(f, "~")
+            f[12] = Clean(e.note):sub(1, math.max(0, math.min(60, room)))
+            Send(table.concat(f, "~"), "WHISPER", sender)
         end
         Send("END~" .. #list, "WHISPER", sender)
     elseif cmd == "E" then
@@ -214,11 +248,14 @@ function RLT:OnSyncMessage(msg, channel, sender)
             itemID = tonumber(f[2]), quality = tonumber(f[3]) or 4, itemName = f[4], winner = f[5],
             class = opt(f[6]), boss = opt(f[7]), zone = opt(f[8]), diff = opt(f[9]),
             ts = (tonumber(f[10]) or 0) + (offer.offset or 0), spec = opt(f[11]), note = opt(f[12]),
-            method = opt(f[13]),
+            method = opt(f[13]), orig = opt(f[14]),
+            edited = tonumber(f[15]) and (tonumber(f[15]) + (offer.offset or 0)) or nil,
         }
         if not e.itemID or not e.winner or e.winner == "" then return end
         local r = self:MergeSyncedEntry(e, sender)
-        if r == "added" then sync.added = sync.added + 1 elseif r == "filled" then sync.filled = sync.filled + 1 end
+        if r == "added" then sync.added = sync.added + 1
+        elseif r == "filled" then sync.filled = sync.filled + 1
+        elseif r == "updated" then sync.updated = sync.updated + 1 end
         self:NotifyChanged()
     elseif cmd == "END" then
         if not sync or sync.done or not sync.asked[sender] then return end

@@ -1,4 +1,4 @@
-RAID LOOT SUITE v2.5.0
+RAID LOOT SUITE v2.6.2
 Loot history, soft reserves, SR / MS / OS rolls, loot council and raid loot tables (WoW 3.3.5a).
 By Saranwrap
 
@@ -9,6 +9,11 @@ INSTALL
      "RaidLootSuite", or "Raid-loot-suite-main" when downloaded from GitHub (Code > Download ZIP).
      Do not rename it, and keep only one of them.
   3. Start the game.
+
+  UPDATING
+    Close the game, DELETE THE OLD ADDON FOLDER COMPLETELY, then extract the new zip.
+    Copying over the old folder can keep old files (images in particular), and the game
+    only loads new files after a full restart, not after /reload.
 
 
 QUICK START
@@ -95,12 +100,20 @@ HISTORY
   - Tag: left-click cycles none > MS > OS > SR > DE, right-click adds a note.
     Next to MS / OS: LC = awarded by the loot council, SR = went to a player who soft
     reserved it (set automatically, or from the right-click menu).
+  - Delete... (bottom right): delete part of the history without erasing it all: what the
+    filters show, by raid, by raid night (raid + size + date), by day, older than N days,
+    pending drops (no winner), test mode entries, or everything. Each asks first and shows
+    how many entries it deletes. Deleted drops are not brought back by a sync.
+    "Duplicates" removes drops recorded twice (the copy changed last is kept).
   - Sync column (tick box at the start of each row, ticked by default): untick a drop to
     keep it out of syncs; it stays only in your history.
   - Sync: gets the loot other raid members recorded in the last 7 days and fills in what
     you missed (disconnected, too far away). They need Raid Loot Suite. Auto sync also runs
     it once after a login, a /reload or when you join a raid (turn it off in Settings >
     History & window).
+    A drop someone changed (winner, MS / OS, LC / SR, note, boss) is recognised as the same
+    drop, not added twice: the most recent change wins. Both players need version 2.6.1 or
+    later for a changed winner to be recognised.
   - Export: CSV (Excel / Google Sheets), plain text or Discord (what is shown, filters apply).
   - Import: Excel / Google Sheets cells with the header row, CSV, this addon's exports, or
     lines like  Item -> Player  /  Boss | Item -> Player MS
@@ -148,6 +161,7 @@ COMMANDS
   /rls minimap                  show / hide the minimap button
   /rls test                     test mode on / off
   /rls testentry                add a sample entry to the history
+  /rls delete                   delete part of the history (by raid, raid night, day...)
   /rls clear                    delete all history
   /rls help                     list the commands in chat
   /raidloot works too.

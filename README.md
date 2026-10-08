@@ -1,12 +1,12 @@
 <p align="center">
-<img width="390" height="332" alt="raid_loot_suite_logo_wow" src="https://github.com/user-attachments/assets/c01d8f25-937a-43fc-bf5a-58caa4f4bc32" />
+<img width="390" height="332" alt="Raid Loot Suite" src="images/logo.png" />
 </p>
 
 # Raid Loot Suite
 
 **Loot history, soft reserves, SR / MS / OS rolls, loot council and raid loot tables.** For World of Warcraft 3.3.5a (Wrath of the Lich King).
 
-Version 2.5.0 · by Saranwrap
+Version 2.6.2 · by Saranwrap
 
 ---
 
@@ -16,6 +16,8 @@ Version 2.5.0 · by Saranwrap
 2. Click **Code → Download ZIP** and extract it into `<WoW folder>\Interface\AddOns\`.
 3. Keep the folder name `Raid-loot-suite-main`: the addon loads from it.
 4. Start the game.
+
+**Updating:** close the game, **delete the old addon folder completely**, then extract the new zip. Copying over the old folder can keep old files (images in particular), and the game only loads new files after a full restart, not after `/reload`.
 
 ## Quick start
 
@@ -104,8 +106,9 @@ Records the item, boss, winner, date and time, raid and size / difficulty.
 - Search, Raid and Period filters; click a column title to sort.
 - Row: hover = tooltip, shift-click = link, ctrl-click = try on, right-click = edit winner / boss / note, mark as MS / OS / SR / DE, delete.
 - Tag: left-click cycles none → MS → OS → SR → DE, right-click adds a note. Next to MS / OS, **LC** means the item was awarded by the loot council and **SR** that it went to a player who soft reserved it (set automatically, or from the right-click menu).
+- **Delete…** (bottom right): delete part of the history without erasing it all. Choose what the filters show, a raid, a raid night (raid, size and date), a day, everything older than 7 / 14 / 30 / 60 / 90 / 180 / 365 days, pending drops (no winner), duplicates (the same drop recorded twice; the copy changed last is kept), test mode entries, or everything. Each choice shows how many entries it deletes and asks first. A sync does not bring deleted drops back.
 - **Sync column** (tick box at the start of each row, ticked by default): untick a drop to keep it out of syncs; it stays only in your history.
-- **Sync** gets the loot other raid members recorded in the last 7 days and fills in what you missed (disconnected, too far away). They need Raid Loot Suite. **Auto sync** also runs it once after a login, a `/reload` or when you join a raid; turn it off in Settings → History & window.
+- **Sync** gets the loot other raid members recorded in the last 7 days and fills in what you missed (disconnected, too far away). They need Raid Loot Suite. **Auto sync** also runs it once after a login, a `/reload` or when you join a raid; turn it off in Settings → History & window. A drop someone changed (winner, MS / OS, LC / SR, note, boss) is recognised as the same drop and not added twice; the most recent change wins (both players need 2.6.1 or later for a changed winner to be recognised).
 - **Export**: CSV (Excel / Google Sheets), plain text or Discord (what is shown; the filters apply), with how each item was awarded (LC / SR).
 - **Import**: Excel / Google Sheets cells with the header row, CSV, this addon's exports, or lines like `Item -> Player` / `Boss | Item -> Player MS`.
 - Outside the game: `Tools\savedvariables_to_csv.py` makes a CSV from the saved file (Python 3).
@@ -153,6 +156,7 @@ Settings, the minimap menu or `/rls test`. Six fake raiders, a few test items fr
 | `/rls minimap` | Show or hide the minimap button |
 | `/rls test` | Test mode on or off |
 | `/rls testentry` | Add a sample entry to the history |
+| `/rls delete` | Delete part of the history (by raid, raid night, day, age…) |
 | `/rls clear` | Delete all the history |
 | `/rls help` | List the commands in chat |
 

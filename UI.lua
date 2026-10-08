@@ -137,6 +137,7 @@ local function ApplyEdit(dialog)
     local e = RLT:GetEntryById(d.id)
     if not e then return end
     local value = strtrim(PopupEditBox(dialog):GetText() or "")
+    RLT:MarkEdited(e)
     if d.field == "winner" then
         if value == "" then
             e.winner, e.class, e.pending = nil, nil, true
@@ -168,6 +169,27 @@ StaticPopupDialogs["RLT_CONFIRM_CLEAR"] = {
     timeout = 0, whileDead = 1, hideOnEscape = 1, showAlert = 1,
 }
 
+-- Delete part of the history: one confirmation popup for every kind of delete
+StaticPopupDialogs["RLT_CONFIRM_DELETE"] = {
+    text = "Raid Loot Suite:\nDelete %s?\nThis cannot be undone.",
+    button1 = YES, button2 = NO,
+    OnAccept = function(self)
+        local d = self.data
+        if not d then return end
+        local n = RLT:DeleteWhere(d.test)
+        RLT:Print(string.format("Deleted %d %s (%s).", n, n == 1 and "entry" or "entries", d.what))
+    end,
+    timeout = 0, whileDead = 1, hideOnEscape = 1, showAlert = 1,
+}
+
+local function ConfirmDelete(what, test)
+    local n = RLT:CountWhere(test)
+    if n == 0 then RLT:Print("Nothing to delete (" .. what .. ").") return end
+    local label = string.format("%d %s: %s", n, n == 1 and "entry" or "entries", what)
+    local dialog = StaticPopup_Show("RLT_CONFIRM_DELETE", label)
+    if dialog then dialog.data = { test = test, what = what } end
+end
+
 ---------------------------------------------------------------------------
 -- MS / OS tag + free note
 ---------------------------------------------------------------------------
@@ -181,6 +203,7 @@ local SPEC_STYLE = {
 
 local function SetSpec(e, spec)
     if spec == "" then spec = nil end
+    RLT:MarkEdited(e)
     e.spec = spec
     RLT:NotifyChanged()
 end
@@ -193,6 +216,7 @@ local function MethodSuffix(e)
     return METHOD_TEXT[m]
 end
 local function SetMethod(e, m)
+    RLT:MarkEdited(e)
     e.method = (e.method ~= m) and m or nil
     RLT:NotifyChanged()
 end
@@ -229,24 +253,26 @@ local function SortCompare(a, b)
     if UI.sortAsc then return va < vb else return va > vb end
 end
 
+-- true when e passes the History filters (search, raid, period)
+function UI:MatchesFilters(e)
+    if self.raidFilter and e.zone ~= self.raidFilter then return false end
+    local p = self.period
+    if p.key == "today" and date("%Y-%m-%d", e.ts) ~= date("%Y-%m-%d") then return false end
+    if p.seconds and time() - e.ts > p.seconds then return false end
+    local q = self.search:lower()
+    if q ~= "" then
+        local hay = ((e.itemName or "") .. "\001" .. (e.boss or "") .. "\001" ..
+                     (e.winner or "") .. "\001" .. (e.zone or "") .. "\001" ..
+                     (e.spec or "") .. "\001" .. (e.method or "") .. "\001" .. (e.note or "")):lower()
+        if not hay:find(q, 1, true) then return false end
+    end
+    return true
+end
+
 function UI:BuildView()
     local view = wipe(self.view)
-    local q = self.search:lower()
-    local now = time()
-    local today = date("%Y-%m-%d")
-    local p = self.period
     for _, e in ipairs(RLT.db.entries) do
-        local ok = true
-        if self.raidFilter and e.zone ~= self.raidFilter then ok = false end
-        if ok and p.key == "today" and date("%Y-%m-%d", e.ts) ~= today then ok = false end
-        if ok and p.seconds and now - e.ts > p.seconds then ok = false end
-        if ok and q ~= "" then
-            local hay = ((e.itemName or "") .. "\001" .. (e.boss or "") .. "\001" ..
-                         (e.winner or "") .. "\001" .. (e.zone or "") .. "\001" ..
-                         (e.spec or "") .. "\001" .. (e.method or "") .. "\001" .. (e.note or "")):lower()
-            if not hay:find(q, 1, true) then ok = false end
-        end
-        if ok then view[#view + 1] = e end
+        if self:MatchesFilters(e) then view[#view + 1] = e end
     end
     table.sort(view, SortCompare)
 end
@@ -585,6 +611,126 @@ local function PeriodMenu()
     return menu
 end
 
+-- "Delete..." menu: by raid, raid night, day, age, or what the filters show
+local function DayOf(e) return date("%Y-%m-%d", e.ts or 0) end
+
+local function DeleteMenu()
+    local entries = RLT.db.entries
+    local zones, zoneCount = {}, {}
+    local nights, nightCount, nightZone, nightDiff, nightDay = {}, {}, {}, {}, {}
+    local days, dayCount = {}, {}
+    local pending, test = 0, 0
+    for _, e in ipairs(entries) do
+        local z = e.zone or "?"
+        if not zoneCount[z] then zones[#zones + 1] = z end
+        zoneCount[z] = (zoneCount[z] or 0) + 1
+
+        local nk = z .. "\001" .. (e.diff or "") .. "\001" .. DayOf(e)
+        if not nightCount[nk] then
+            nights[#nights + 1] = nk
+            nightZone[nk], nightDiff[nk], nightDay[nk] = e.zone, e.diff or "", DayOf(e)
+        end
+        nightCount[nk] = (nightCount[nk] or 0) + 1
+
+        local d = DayOf(e)
+        if not dayCount[d] then days[#days + 1] = d end
+        dayCount[d] = (dayCount[d] or 0) + 1
+
+        if not e.winner then pending = pending + 1 end
+        if e.boss == "Test Boss" then test = test + 1 end
+    end
+    table.sort(zones)
+    table.sort(days, function(a, b) return a > b end)
+    table.sort(nights, function(a, b)
+        if nightDay[a] ~= nightDay[b] then return nightDay[a] > nightDay[b] end
+        return a < b
+    end)
+
+    local function Count(n) return " |cff888888(" .. n .. ")|r" end
+    local MAX_ROWS = 25   -- keep the sub-menus on screen
+
+    local byRaid = {}
+    for _, z in ipairs(zones) do
+        byRaid[#byRaid + 1] = { text = z .. Count(zoneCount[z]), notCheckable = true, func = function()
+            CloseDropDownMenus()
+            ConfirmDelete("every drop in " .. z, function(e) return (e.zone or "?") == z end)
+        end }
+    end
+
+    local byNight = {}
+    for i, nk in ipairs(nights) do
+        if i > MAX_ROWS then break end
+        local z, df, d = nightZone[nk], nightDiff[nk], nightDay[nk]
+        local label = RaidLabel({ zone = z, diff = df }) .. "  " .. d
+        byNight[#byNight + 1] = { text = label .. Count(nightCount[nk]), notCheckable = true, func = function()
+            CloseDropDownMenus()
+            ConfirmDelete(label, function(e) return e.zone == z and (e.diff or "") == df and DayOf(e) == d end)
+        end }
+    end
+
+    local byDay = {}
+    for i, d in ipairs(days) do
+        if i > MAX_ROWS then break end
+        byDay[#byDay + 1] = { text = d .. Count(dayCount[d]), notCheckable = true, func = function()
+            CloseDropDownMenus()
+            ConfirmDelete("every drop of " .. d, function(e) return DayOf(e) == d end)
+        end }
+    end
+
+    local olderThan = {}
+    for _, n in ipairs({ 7, 14, 30, 60, 90, 180, 365 }) do
+        local limit = time() - n * 86400
+        local c = RLT:CountWhere(function(e) return (e.ts or 0) < limit end)
+        olderThan[#olderThan + 1] = { text = n .. " days" .. Count(c), notCheckable = true, disabled = c == 0, func = function()
+            CloseDropDownMenus()
+            ConfirmDelete("drops older than " .. n .. " days", function(e) return (e.ts or 0) < limit end)
+        end }
+    end
+
+    local nDup = 0
+    for _ in pairs(RLT:FindDuplicates()) do nDup = nDup + 1 end
+
+    local shown = #UI.view
+    local filtered = UI.raidFilter or UI.period.key ~= "all" or UI.search ~= ""
+    local menu = {
+        { text = "Delete", isTitle = true, notCheckable = true },
+        { text = "What the filters show" .. Count(shown), notCheckable = true, disabled = not filtered or shown == 0,
+          tooltipTitle = "What the filters show", tooltipText = "Every row now in the list (search, Raid and Period filters).",
+          tooltipOnButton = 1, func = function()
+            CloseDropDownMenus()
+            ConfirmDelete("the rows shown with the current filters", function(e) return UI:MatchesFilters(e) end)
+        end },
+        { text = "By raid", notCheckable = true, hasArrow = #byRaid > 0, disabled = #byRaid == 0, menuList = byRaid },
+        { text = "By raid night", notCheckable = true, hasArrow = #byNight > 0, disabled = #byNight == 0, menuList = byNight },
+        { text = "By day", notCheckable = true, hasArrow = #byDay > 0, disabled = #byDay == 0, menuList = byDay },
+        { text = "Older than", notCheckable = true, hasArrow = true, menuList = olderThan },
+        { text = "Duplicates" .. Count(nDup), notCheckable = true, disabled = nDup == 0,
+          tooltipTitle = "Duplicates", tooltipText = "The same drop recorded twice (same item, same winner or first winner, within 15 minutes). The copy changed last is kept.",
+          tooltipOnButton = 1, func = function()
+            CloseDropDownMenus()
+            local dup = RLT:FindDuplicates()
+            ConfirmDelete("duplicate copies of a drop", function(e) return dup[e] end)
+        end },
+        { text = "Pending (no winner)" .. Count(pending), notCheckable = true, disabled = pending == 0, func = function()
+            CloseDropDownMenus()
+            ConfirmDelete("pending drops (no winner)", function(e) return not e.winner end)
+        end },
+        { text = "Test mode entries" .. Count(test), notCheckable = true, disabled = test == 0, func = function()
+            CloseDropDownMenus()
+            ConfirmDelete("test mode entries", function(e) return e.boss == "Test Boss" end)
+        end },
+        { text = "|cffff5555Everything|r" .. Count(#entries), notCheckable = true, disabled = #entries == 0, func = function()
+            CloseDropDownMenus()
+            StaticPopup_Show("RLT_CONFIRM_CLEAR")
+        end },
+    }
+    return menu
+end
+
+function UI:ShowDeleteMenu()
+    ShowMenu(DeleteMenu(), self.deleteBtn)
+end
+
 ---------------------------------------------------------------------------
 -- Options panel
 ---------------------------------------------------------------------------
@@ -596,6 +742,8 @@ local function CheckBox(parent, name, label, desc, y, getter, setter)
     _G[name .. "Text"]:SetFontObject("GameFontHighlight")
     local d = Text(parent, "GameFontDisableSmall")
     d:SetPoint("TOPLEFT", cb, "BOTTOMLEFT", 28, 4)
+    d:SetWidth(350)           -- stays left of the right column; long text wraps
+    d:SetJustifyH("LEFT")
     d:SetText(desc)
     cb:SetScript("OnShow", function(self) self:SetChecked(getter()) end)
     cb:SetScript("OnClick", function(self) setter(self:GetChecked() and true or false) end)
@@ -652,8 +800,7 @@ function UI:CreateOptions(parent)
         function() return not s.minimap.hide end,
         function(v) s.minimap.hide = not v; RLT:UpdateMinimapButton() end)
     CheckBox(o, "RLTOptAutoSync", "Auto sync (after a login / reload, or when you join a raid)",
-        "Gets the loot history the raid recorded and fills in drops you missed while disconnected. " ..
-        "Untick to turn it off; the Sync button in the History still works any time.", -270,
+        "Fills in drops you missed while disconnected. The Sync button in the History always works.", -270,
         function() return s.autoSync end, function(v) s.autoSync = v end)
 
     -- Right column: opacity slider
@@ -918,9 +1065,11 @@ function UI:Create()
     import:SetScript("OnClick", function() RLT:ShowImport() end)
 
 
-    local clear = FlatButton(f, "Clear history", 110, 24, true)
+    local clear = FlatButton(f, "Delete...", 110, 24, true)
     clear:SetPoint("BOTTOMRIGHT", -24, 10)
-    clear:SetScript("OnClick", function() StaticPopup_Show("RLT_CONFIRM_CLEAR") end)
+    clear.tip = "Delete part of the history: by raid, raid night, day or age, the rows the filters show, pending or test entries, or everything."
+    clear:SetScript("OnClick", function() UI:ShowDeleteMenu() end)
+    self.deleteBtn = clear
 
     self.status = Text(f, "GameFontDisableSmall")
     local sync = FlatButton(f, "Sync", 80, 24)
