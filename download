@@ -1,4 +1,0 @@
-# Files only for the GitHub page: left out of "Code > Download ZIP"
-README.md export-ignore
-images/ export-ignore
-.gitattributes export-ignore
