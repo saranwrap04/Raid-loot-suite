@@ -173,48 +173,13 @@ Settings, the minimap menu or `/rls test`. Six fake raiders, a few test items fr
 
 ## Screenshots
 
-<p align="center"><b>Loot session</b></p>
-<p align="center">
-<img width="760" alt="Loot session" src="images/screenshots/loot-session.png" />
-</p>
-
-<p align="center"><b>Right-click menu in the loot queue</b></p>
-<p align="center">
-<img width="760" alt="Right-click menu in the loot queue" src="images/screenshots/queue-menu.png" />
-</p>
-
-<p align="center"><b>Raider popups: soft reserve roll and MS / OS roll</b></p>
-<p align="center">
-<img width="397" alt="Soft reserve roll popup" src="images/screenshots/popup-sr.png" />
-<img width="397" alt="MS / OS roll popup" src="images/screenshots/popup-roll.png" />
-</p>
-
-<p align="center"><b>Soft reserves</b></p>
-<p align="center">
-<img width="760" alt="Soft reserves" src="images/screenshots/soft-reserves.png" />
-</p>
-
-<p align="center"><b>Loot council members</b></p>
-<p align="center">
-<img width="760" alt="Loot council members" src="images/screenshots/loot-council.png" />
-</p>
-
-<p align="center"><b>History</b></p>
-<p align="center">
-<img width="760" alt="History" src="images/screenshots/history.png" />
-</p>
-
-<p align="center"><b>Loot tables</b></p>
-<p align="center">
-<img width="760" alt="Loot tables" src="images/screenshots/loot-tables.png" />
-</p>
-
-<p align="center"><b>Settings: loot session</b></p>
-<p align="center">
-<img width="760" alt="Settings: loot session" src="images/screenshots/settings-session.png" />
-</p>
-
-<p align="center"><b>Settings: history and window</b></p>
-<p align="center">
-<img width="760" alt="Settings: history and window" src="images/screenshots/settings-history.png" />
-</p>
+<img width="1079" height="734" alt="Screenshot 2026-10-09 121747" src="https://github.com/user-attachments/assets/4de0d341-abc3-4e4b-9e8e-221c88d3446e" />
+<img width="1081" height="739" alt="Screenshot 2026-10-09 121738" src="https://github.com/user-attachments/assets/1a2f5a56-83b5-4654-a63d-81742d72d7da" />
+<img width="1081" height="736" alt="Screenshot 2026-10-09 121728" src="https://github.com/user-attachments/assets/d3ebc03b-eac2-493f-85f7-964f4adf4446" />
+<img width="1080" height="735" alt="Screenshot 2026-10-09 121722" src="https://github.com/user-attachments/assets/231fd0a3-a8ba-4728-96da-761bae4dadb9" />
+<img width="1081" height="734" alt="Screenshot 2026-10-09 121648" src="https://github.com/user-attachments/assets/32cfc9fd-c2f7-4557-823c-291dce374736" />
+<img width="1078" height="735" alt="Screenshot 2026-10-09 121642" src="https://github.com/user-attachments/assets/857cd670-5060-4e79-960f-9d884bf3db4c" />
+<img width="1076" height="735" alt="Screenshot 2026-10-09 121636" src="https://github.com/user-attachments/assets/3d2c839b-5222-467a-8d4f-ebde1d47cf5b" />
+<img width="397" height="141" alt="Screenshot 2026-10-09 121603" src="https://github.com/user-attachments/assets/6132647c-9c17-4a95-aa43-c04b287c598e" />
+<img width="396" height="139" alt="Screenshot 2026-10-09 121549" src="https://github.com/user-attachments/assets/f661482c-a27c-48c7-99c2-498d2ba22c14" />
+<img width="1079" height="736" alt="Screenshot 2026-10-09 121526" src="https://github.com/user-attachments/assets/3c622dbb-b3eb-4a05-bf48-43f2dd4703f2" />
