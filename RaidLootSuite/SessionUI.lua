@@ -173,19 +173,9 @@ function MakeResizable(f, key, minW, minH, maxW, maxH, onLayout)
     return grip
 end
 
-local function Checkbox(parent, name, label, x, y, key)
-    local cb = CreateFrame("CheckButton", name, parent, "UICheckButtonTemplate")
-    W().Size(cb, 24, 24)
-    cb:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-    _G[name .. "Text"]:SetText(label)
-    _G[name .. "Text"]:SetFontObject("GameFontHighlightSmall")
-    cb:SetScript("OnShow", function(self) self:SetChecked(RLT.db.settings[key]) end)
-    cb:SetScript("OnClick", function(self) RLT.db.settings[key] = self:GetChecked() and true or false end)
-    return cb
-end
-
 SUI.Window = function(...) return Window(...) end
 SUI.MakeResizable = function(...) return MakeResizable(...) end
+SUI.EditBox = function(...) return EditBox(...) end
 
 ---------------------------------------------------------------------------
 -- Loot Session window
@@ -603,7 +593,6 @@ function SUI:CreateSession()
     status:SetPoint("BOTTOMRIGHT", -14, 17)
     self.status = status
 
-    self:CreateSettings(f)
 
     -- Resize grip (size from the previous version is kept)
     local st = RLT.db.settings
@@ -614,133 +603,6 @@ function SUI:CreateSession()
     end
     MakeResizable(f, "session", SESSION_W, SESSION_H, SESSION_MAX_W, SESSION_MAX_H, function() SUI:Layout() end)
     f:SetScript("OnShow", function() SUI:Layout() end)
-end
-
-function SUI:CreateSettings(f)
-    local w_ = W()
-    local o = CreateFrame("Frame", nil, f)
-    o:SetPoint("TOPLEFT", 12, -36)
-    o:SetPoint("BOTTOMRIGHT", -12, 42)
-    w_.Backdrop(o, w_.C.bg)
-    o:SetFrameLevel(f:GetFrameLevel() + 20)
-    o:EnableMouse(true)
-    o:Hide()
-    self.settings = o
-    local s = function() return RLT.db.settings end
-
-    local title = w_.Text(o, "GameFontNormalLarge")
-    title:SetPoint("TOPLEFT", 12, -10)
-    title:SetText("Session settings")
-    title:SetTextColor(unpack(w_.C.accent))
-
-    local testBtn = w_.FlatButton(o, "Test mode", 110, 24)
-    testBtn:SetPoint("TOPRIGHT", -12, -8)
-    testBtn.tip = "Try rolls, soft reserves and council alone: fake raiders answer, nothing is sent to chat. Awards go in the history as \"Test Boss\". (/rls test)"
-    testBtn:SetScript("OnClick", function() RLT:ToggleTest() end)
-    self.testBtn = testBtn
-    local testInfo = w_.Text(o, "GameFontDisableSmall")
-    testInfo:SetPoint("RIGHT", testBtn, "LEFT", -10, 0)
-    testInfo:SetText("Try the loot session alone, with fake raiders:")
-
-    -- Roll timer
-    local slider = CreateFrame("Slider", "RLSRollTimeSlider", o, "OptionsSliderTemplate")
-    w_.Size(slider, 220, 17)
-    slider:SetPoint("TOPLEFT", 20, -58)
-    slider:SetMinMaxValues(RLT.ROLL_TIME_MIN, RLT.ROLL_TIME_MAX)
-    slider:SetValueStep(1)
-    _G.RLSRollTimeSliderLow:SetText(RLT.ROLL_TIME_MIN .. "s")
-    _G.RLSRollTimeSliderHigh:SetText(RLT.ROLL_TIME_MAX .. "s")
-    _G.RLSRollTimeSliderText:SetFontObject("GameFontHighlightSmall")
-    slider:SetScript("OnShow", function(self) self:SetValue(s().rollTime) end)
-    slider:SetScript("OnValueChanged", function(_, v)
-        v = math.floor(v + 0.5)
-        if v ~= s().rollTime then RLT:SetRollTime(v) end
-        _G.RLSRollTimeSliderText:SetText("Roll timer: " .. v .. " seconds")
-    end)
-
-    -- Roll values are fixed
-    local rolls = w_.Text(o, "GameFontHighlightSmall")
-    rolls:SetPoint("TOPLEFT", 20, -100)
-    rolls:SetText("Rolls:  |cff4cd964MS = /roll 100|r    |cffffa040OS = /roll 99|r    |cffc77dffSR = /roll 100|r")
-
-    local srLabel = w_.Text(o, "GameFontHighlightSmall")
-    srLabel:SetPoint("TOPLEFT", 20, -158)
-    srLabel:SetText("Soft reserves per player:")
-    local srBtn = w_.FlatButton(o, "", 40, 20)
-    srBtn:SetPoint("LEFT", srLabel, "RIGHT", 8, 0)
-    srBtn:SetScript("OnShow", function(self) self:SetText(tostring(s().srPerPlayer)) end)
-    srBtn:SetScript("OnClick", function(self)
-        s().srPerPlayer = (s().srPerPlayer % 3) + 1
-        self:SetText(tostring(s().srPerPlayer))
-    end)
-
-    local function ChannelButton(label, y, key)
-        local l = w_.Text(o, "GameFontHighlightSmall")
-        l:SetPoint("TOPLEFT", 20, y)
-        l:SetText(label)
-        local b = w_.FlatButton(o, "", 120, 20)
-        b:SetPoint("LEFT", l, "RIGHT", 8, 0)
-        b:SetScript("OnShow", function(self) self:SetText(CHANNEL_NAMES[s()[key]] or "?") end)
-        b:SetScript("OnClick", function(self)
-            s()[key] = CHANNEL_NEXT[s()[key]] or "RAID"
-            self:SetText(CHANNEL_NAMES[s()[key]])
-        end)
-    end
-    ChannelButton("Announce roll start in:", -188, "announceStart")
-    ChannelButton("Announce winners in:", -216, "announceResult")
-    ChannelButton("Countdown (5, 4, 3, 2, 1) in:", -244, "announceCountdown")
-
-    -- Right column: checkboxes
-    Checkbox(o, "RLSOptAutoQueue", "Add boss loot to the queue when I'm master looter", 360, -50, "autoQueue")
-    Checkbox(o, "RLSOptAutoAward", "Give the item with Master Loot when it's awarded", 360, -78, "autoAward")
-    Checkbox(o, "RLSOptCountdown", "Count down 5, 4, 3, 2, 1 in chat at the end of a roll", 360, -106, "countdown")
-    Checkbox(o, "RLSOptWhisperSR", "Players can whisper me \"sr [item]\"", 360, -134, "whisperSR")
-    Checkbox(o, "RLSOptWhisperResp", "Players can whisper me MS / OS / pass (council)", 360, -162, "whisperResponses")
-    Checkbox(o, "RLSOptAnnounceDrops", "Post the boss loot in raid chat when I loot the boss (master looter)", 360, -190, "announceDrops")
-
-    -- Designated disenchanter
-    local deLabel = w_.Text(o, "GameFontHighlightSmall")
-    deLabel:SetPoint("TOPLEFT", 366, -226)
-    deLabel:SetText("Disenchanter:")
-    local deBox = EditBox(o, 130, "Player name")
-    deBox:SetPoint("LEFT", deLabel, "RIGHT", 8, 0)
-    deBox:SetScript("OnShow", function(self) self:SetText(s().disenchanter or "") end)
-    deBox:SetScript("OnTextChanged", function(self)
-        s().disenchanter = strtrim(self:GetText() or "")
-        if s().disenchanter == "" then self.placeholder:Show() else self.placeholder:Hide() end
-    end)
-    deBox:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
-    local deTarget = w_.FlatButton(o, "Use target", 80, 20)
-    deTarget:SetPoint("LEFT", deBox, "RIGHT", 6, 0)
-    deTarget.tip = "Set your current target as the disenchanter."
-    deTarget:SetScript("OnClick", function()
-        if UnitExists("target") and UnitIsPlayer("target") then deBox:SetText(UnitName("target")) end
-    end)
-    Checkbox(o, "RLSOptAutoDE", "Nobody rolls: give the item to the disenchanter", 360, -250, "autoDisenchant")
-
-    local cl = w_.Text(o, "GameFontNormal")
-    cl:SetPoint("TOPLEFT", 20, -282)
-    cl:SetText("Loot council")
-    cl:SetTextColor(unpack(w_.C.accent))
-    local pick = w_.FlatButton(o, "Choose council members", 170, 22)
-    pick:SetPoint("TOPLEFT", 20, -302)
-    pick.tip = "Pick who can vote in a council: tick raid members, or add a name. You are always on it."
-    pick:SetScript("OnClick", function() RLT:ShowCouncil() end)
-    local summary = w_.Text(o, "GameFontHighlightSmall")
-    summary:SetPoint("LEFT", pick, "RIGHT", 10, 0)
-    summary:SetWidth(500)
-    summary:SetJustifyH("LEFT")
-    self.councilSummary = summary
-    o:SetScript("OnShow", function() SUI:RefreshCouncilSummary() end)
-
-    local help = w_.Text(o, "GameFontDisableSmall")
-    help:SetPoint("TOPLEFT", 20, -336)
-    help:SetWidth(690)
-    help:SetJustifyH("LEFT")
-    help:SetText("Rolls: an item soft reserved by players in the raid is rolled among those players only (one SR'er = they win). " ..
-        "Otherwise /roll MS beats /roll OS, highest roll wins, ties reroll automatically.\n" ..
-        "Council: raiders answer with the popup (if they have Raid Loot Suite) or by whispering you MS / OS / pass. " ..
-        "Council members need Raid Loot Suite to see candidates and vote; you award.")
 end
 
 function SUI:CouncilText()
@@ -765,11 +627,11 @@ function SUI:RefreshTestButton()
     if RLT.testMode then
         self.subtitle:SetText("|cffffd100TEST MODE - fake raiders, nothing is sent to chat|r")
         self.testBtn:SetText("Stop test")
-        self.testBtn:SetBackdropBorderColor(1, 0.82, 0, 1)
+        self.testBtn:SetSelected(true)
     else
         self.subtitle:SetText("")
         self.testBtn:SetText("Test mode")
-        self.testBtn:SetBackdropBorderColor(unpack(W().C.border))
+        self.testBtn:SetSelected(false)
     end
 end
 
@@ -901,7 +763,7 @@ function SUI:Refresh()
                 row.vote:Show()
                 local mineVote = item.votes and item.votes[Me()] == c.name
                 row.vote:SetText(mineVote and "Voted" or "Vote")
-                row.vote:SetBackdropColor(unpack(mineVote and w_.C.accent or w_.C.button))
+                row.vote:SetSelected(mineVote and true or false)
             else
                 row.vote:Hide()
             end
@@ -1181,6 +1043,7 @@ function SUI:CreateSR()
     _G.RLSSROnlyRaidText:SetFontObject("GameFontHighlightSmall")
     onlyRaid:SetScript("OnShow", function(cb) cb:SetChecked(RLT.db.settings.srOnlyRaid) end)
     onlyRaid:SetScript("OnClick", function(cb) RLT.db.settings.srOnlyRaid = cb:GetChecked() and true or false; SUI:RefreshSR() end)
+    RLT.Kit.SkinCheck(onlyRaid)
     self.srOnlyRaid = onlyRaid
 
     -- Header + list
@@ -1315,6 +1178,7 @@ function SUI:CreateSR()
     replace:SetPoint("BOTTOMLEFT", 6, 6)
     _G.RLSSRReplaceText:SetText("Replace the current list")
     _G.RLSSRReplaceText:SetFontObject("GameFontHighlightSmall")
+    RLT.Kit.SkinCheck(replace)
     local go = w_.FlatButton(imp, "Import", 90, 22)
     go:SetPoint("BOTTOMRIGHT", -8, 8)
     go:SetScript("OnClick", function()
@@ -1355,7 +1219,7 @@ function SUI:RefreshSR()
     local w_ = W()
     local view = self.srView or "item"
     for key, b in pairs(self.srTabs) do
-        b:SetBackdropColor(unpack(key == view and w_.C.sel or w_.C.button))
+        b:SetSelected(key == view)
     end
     for _, v in ipairs(SR_VIEWS) do
         if v.key == view then self.srHead[1]:SetText(v.cols[1]); self.srHead[2]:SetText(v.cols[2]) end
@@ -1648,9 +1512,9 @@ function SUI:CreateCouncil()
         box:SetPoint("LEFT", 8, 0)
         w_.Backdrop(box, w_.C.button)
         local check = box:CreateTexture(nil, "OVERLAY")
-        w_.Size(check, 20, 20)
-        check:SetPoint("CENTER", 1, 0)
-        check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+        check:SetPoint("TOPLEFT", 2, -2)
+        check:SetPoint("BOTTOMRIGHT", -2, 2)
+        check:SetTexture(w_.C.accent[1], w_.C.accent[2], w_.C.accent[3], 1)
         local name = w_.Text(row, "GameFontHighlightSmall")
         name:SetPoint("LEFT", 30, 0)
         name:SetWidth(170); name:SetJustifyH("LEFT")

@@ -6,7 +6,7 @@
 
 **Loot history, soft reserves, SR / MS / OS rolls, loot council and raid loot tables.** For World of Warcraft 3.3.5a (Wrath of the Lich King).
 
-Version 2.6.3 · by Saranwrap
+Version 2.7.1 · by Saranwrap
 
 ---
 
@@ -102,13 +102,13 @@ Tick who can vote (you are always on it), add the leader and assists in one clic
 Records the item, boss, winner, date and time, raid and size / difficulty.
 
 - Winners come from the `<player> receives loot` lines. Drops seen in the loot window show "Pending…" until someone loots them.
-- By default: epic and better, inside raids, trash included. Emblems, Abyss Crystals and Frozen Orbs are ignored (Settings → History & window).
+- By default: epic and better, inside raids, trash included. Emblems, Abyss Crystals and Frozen Orbs are ignored (Settings → Recording).
 - Search, Raid and Period filters; click a column title to sort.
 - Row: hover = tooltip, shift-click = link, ctrl-click = try on, right-click = edit winner / boss / note, mark as MS / OS / SR / DE, delete.
 - Tag: left-click cycles none → MS → OS → SR → DE, right-click adds a note. Next to MS / OS, **LC** means the item was awarded by the loot council and **SR** that it went to a player who soft reserved it (set automatically, or from the right-click menu).
 - **Delete…** (bottom right): delete part of the history without erasing it all. Choose what the filters show, a raid, a raid night (raid, size and date), a day, everything older than 7 / 14 / 30 / 60 / 90 / 180 / 365 days, pending drops (no winner), duplicates (the same drop recorded twice; the copy changed last is kept), test mode entries, or everything. Each choice shows how many entries it deletes and asks first. A sync does not bring deleted drops back.
 - **Sync column** (tick box at the start of each row, ticked by default): untick a drop to keep it out of syncs; it stays only in your history.
-- **Sync** gets the loot other raid members recorded in the last 7 days and fills in what you missed (disconnected, too far away). They need Raid Loot Suite. **Auto sync** also runs it once after a login, a `/reload` or when you join a raid; turn it off in Settings → History & window. A drop someone changed (winner, MS / OS, LC / SR, note, boss) is recognised as the same drop and not added twice; the most recent change wins (both players need 2.6.1 or later for a changed winner to be recognised).
+- **Sync** gets the loot other raid members recorded in the last 7 days and fills in what you missed (disconnected, too far away). They need Raid Loot Suite. **Auto sync** also runs it once after a login, a `/reload` or when you join a raid; turn it off in Settings → Recording. A drop someone changed (winner, MS / OS, LC / SR, note, boss) is recognised as the same drop and not added twice; the most recent change wins (both players need 2.6.1 or later for a changed winner to be recognised).
 - **Export**: CSV (Excel / Google Sheets), plain text or Discord (what is shown; the filters apply), with how each item was awarded (LC / SR).
 - **Import**: Excel / Google Sheets cells with the header row, CSV, this addon's exports, or lines like `Item -> Player` / `Boss | Item -> Player MS`.
 - Outside the game: `Tools\savedvariables_to_csv.py` makes a CSV from the saved file (Python 3).
@@ -130,8 +130,17 @@ Drop chances come from the AzerothCore world database (the core ChromieCraft run
 
 ## Settings
 
-- **Loot session**: test mode, roll timer, announce channels (roll start, winners, countdown), auto-queue, post boss loot in raid chat, give with Master Loot, countdown, whisper SR, whisper MS / OS, disenchanter (and give no-roll items to the disenchanter), council members.
-- **History & window**: minimum quality, raids only, trash drops, chat line when loot is recorded, minimap button, auto sync, window opacity, links.
+Categories are in a side bar on the left. Hover an option to see what it does; sliders can be dragged, scrolled or typed in.
+
+| Category | Options |
+| --- | --- |
+| **Rolls** | Roll timer, countdown 5-4-3-2-1, soft reserves per player, whisper "sr [item]", test mode |
+| **Announcements** | Channel for the roll start, the winners and the countdown; post the boss loot in raid chat |
+| **Master looter** | Add boss loot to the queue, give the item with Master Loot when awarded, disenchanter (and give no-roll items to the disenchanter) |
+| **Loot council** | Council members, whisper MS / OS / pass |
+| **Recording** | Minimum item quality, raids only, trash drops, chat line when loot is recorded, auto sync |
+| **Window** | Window opacity, minimap button |
+| **Commands and links** | Commands, where the data is saved, links |
 
 Raid warning needs leader or assist; otherwise raid chat is used.
 
@@ -173,13 +182,43 @@ Settings, the minimap menu or `/rls test`. Six fake raiders, a few test items fr
 
 ## Screenshots
 
-<img width="1079" height="734" alt="Screenshot 2026-10-09 121747" src="https://github.com/user-attachments/assets/4de0d341-abc3-4e4b-9e8e-221c88d3446e" />
-<img width="1081" height="739" alt="Screenshot 2026-10-09 121738" src="https://github.com/user-attachments/assets/1a2f5a56-83b5-4654-a63d-81742d72d7da" />
-<img width="1081" height="736" alt="Screenshot 2026-10-09 121728" src="https://github.com/user-attachments/assets/d3ebc03b-eac2-493f-85f7-964f4adf4446" />
-<img width="1080" height="735" alt="Screenshot 2026-10-09 121722" src="https://github.com/user-attachments/assets/231fd0a3-a8ba-4728-96da-761bae4dadb9" />
-<img width="1081" height="734" alt="Screenshot 2026-10-09 121648" src="https://github.com/user-attachments/assets/32cfc9fd-c2f7-4557-823c-291dce374736" />
-<img width="1078" height="735" alt="Screenshot 2026-10-09 121642" src="https://github.com/user-attachments/assets/857cd670-5060-4e79-960f-9d884bf3db4c" />
-<img width="1076" height="735" alt="Screenshot 2026-10-09 121636" src="https://github.com/user-attachments/assets/3d2c839b-5222-467a-8d4f-ebde1d47cf5b" />
-<img width="397" height="141" alt="Screenshot 2026-10-09 121603" src="https://github.com/user-attachments/assets/6132647c-9c17-4a95-aa43-c04b287c598e" />
-<img width="396" height="139" alt="Screenshot 2026-10-09 121549" src="https://github.com/user-attachments/assets/f661482c-a27c-48c7-99c2-498d2ba22c14" />
-<img width="1079" height="736" alt="Screenshot 2026-10-09 121526" src="https://github.com/user-attachments/assets/3c622dbb-b3eb-4a05-bf48-43f2dd4703f2" />
+<p align="center"><b>Loot session</b></p>
+<p align="center">
+<img width="760" alt="Loot session" src="images/screenshots/loot-session.png" />
+</p>
+
+<p align="center"><b>Right-click menu in the loot queue</b></p>
+<p align="center">
+<img width="760" alt="Right-click menu in the loot queue" src="images/screenshots/queue-menu.png" />
+</p>
+
+<p align="center"><b>Raider popups: soft reserve roll and MS / OS roll</b></p>
+<p align="center">
+<img width="397" alt="Soft reserve roll popup" src="images/screenshots/popup-sr.png" />
+<img width="397" alt="MS / OS roll popup" src="images/screenshots/popup-roll.png" />
+</p>
+
+<p align="center"><b>Soft reserves</b></p>
+<p align="center">
+<img width="760" alt="Soft reserves" src="images/screenshots/soft-reserves.png" />
+</p>
+
+<p align="center"><b>Loot council members</b></p>
+<p align="center">
+<img width="760" alt="Loot council members" src="images/screenshots/loot-council.png" />
+</p>
+
+<p align="center"><b>History</b></p>
+<p align="center">
+<img width="760" alt="History" src="images/screenshots/history.png" />
+</p>
+
+<p align="center"><b>Loot tables</b></p>
+<p align="center">
+<img width="760" alt="Loot tables" src="images/screenshots/loot-tables.png" />
+</p>
+
+<p align="center"><b>Settings</b></p>
+<p align="center">
+<img width="760" alt="Settings" src="images/screenshots/settings.png" />
+</p>

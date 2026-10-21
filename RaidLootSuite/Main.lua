@@ -88,6 +88,7 @@ function Main:Create()
     w_.Size(icon, 24, 24)
     icon:SetPoint("LEFT", 6, 0)
     icon:SetTexture(RLT.MEDIA .. "logo")
+    w_.Size(icon, 22, 22)
     local title = w_.Text(bar, "GameFontNormalLarge")
     title:SetPoint("LEFT", icon, "RIGHT", 8, 0)
     title:SetText(RLT.NAME)
@@ -120,21 +121,14 @@ function Main:Create()
         prev = b
     end
 
-    -- Settings page: "Loot session" | "History & window"
+    -- Settings page: side bar of categories (Options.lua), under the tab row
     local sp = CreateFrame("Frame", nil, f)
-    sp:SetPoint("TOPLEFT", 0, PAGE_TOP)
+    sp:SetPoint("TOPLEFT", 0, TAB_Y - 26)
     sp:SetPoint("BOTTOMRIGHT", 0, 0)
+    sp:SetFrameLevel(f:GetFrameLevel() + 30)
+    sp:EnableMouse(true)
     sp:Hide()
     self.settingsPage = sp
-    self.subTabs = {}
-    local sprev
-    for _, st in ipairs({ { "session", "Loot session" }, { "history", "History & window" } }) do
-        local b = w_.FlatButton(sp, st[2], 130, 22)
-        if sprev then b:SetPoint("LEFT", sprev, "RIGHT", 4, 0) else b:SetPoint("TOPLEFT", 12, -36) end
-        b:SetScript("OnClick", function() Main:ShowSettingsPage(st[1]) end)
-        self.subTabs[st[1]] = b
-        sprev = b
-    end
 
     RLT.SUI.MakeResizable(f, "main", MAIN_W, MAIN_H, MAIN_MAX_W, MAIN_MAX_H, function() end)
     f.grip:SetFrameLevel(f:GetFrameLevel() + 60)
@@ -156,27 +150,14 @@ function Main:EmbedPages()
     SUI.helpBtn:ClearAllPoints()
     SUI.helpBtn:SetPoint("RIGHT", self.settingsBtn, "LEFT", -6, 0)
 
-    -- settings: the session settings and the history settings become the two settings pages
-    UI:SetOptionsShown(false)
-    local sp = self.settingsPage
-    for key, o in pairs({ session = SUI.settings, history = UI.options }) do
-        o:SetParent(sp)
-        o:ClearAllPoints()
-        o:SetPoint("TOPLEFT", sp, "TOPLEFT", 12, -64)
-        o:SetPoint("BOTTOMRIGHT", sp, "BOTTOMRIGHT", -12, 12)
-        o:Hide()
-    end
-    self.settingsFrames = { session = SUI.settings, history = UI.options }
+    -- settings: one page with a side bar of categories
+    self.settings = RLT.Options:Build(self.settingsPage)
 end
 
 function Main:ShowSettingsPage(which)
-    which = which or self.settingsWhich or "session"
+    which = which or self.settingsWhich
     self.settingsWhich = which
-    local C = W().C
-    for key, o in pairs(self.settingsFrames) do
-        if key == which then o:Show() else o:Hide() end
-        self.subTabs[key]:SetBackdropColor(unpack(key == which and C.sel or C.button))
-    end
+    self.settings:Show(which or self.settings.current or self.settings.first)
 end
 
 ---------------------------------------------------------------------------
@@ -203,11 +184,9 @@ function RLT:ShowTab(key, sub)
         self.db.settings.lastTab = key
     end
     Main.current = key
-    for k, b in pairs(Main.tabs) do
-        b:SetBackdropColor(unpack(k == key and C.sel or C.button))
-    end
+    for k, b in pairs(Main.tabs) do b:SetSelected(k == key) end
     Main.settingsBtn:SetText(key == "settings" and "Back" or "Settings")
-    Main.settingsBtn:SetBackdropColor(unpack(key == "settings" and C.sel or C.button))
+    Main.settingsBtn:SetSelected(key == "settings")
 end
 
 local function Toggle(key)

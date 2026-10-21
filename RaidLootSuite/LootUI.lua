@@ -200,6 +200,7 @@ function LUI:Create()
 
     -- Raid picker + mode buttons + search
     local raidBtn = w_.FlatButton(f, "", 210, 22)
+    RLT.Kit.Arrow(raidBtn)
     raidBtn:SetPoint("TOPLEFT", 12, -40)
     raidBtn:SetScript("OnClick", function(b)
         local menu = { { text = "Raid", isTitle = true, notCheckable = true } }
@@ -410,7 +411,7 @@ function LUI:Refresh()
     for _, m in ipairs(raid.modes) do avail[m] = true end
     for m, b in pairs(self.modeBtns) do
         if avail[m] then b:Show() else b:Hide() end
-        b:SetBackdropColor(unpack(m == self.mode and w_.C.sel or w_.C.button))
+        b:SetSelected(m == self.mode)
     end
 
     -- bosses

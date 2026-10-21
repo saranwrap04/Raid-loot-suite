@@ -15,9 +15,9 @@ RLT.FOLDER = ADDON_NAME or "RaidLootSuite"
 RLT.MEDIA = "Interface\\AddOns\\" .. RLT.FOLDER .. "\\textures\\"
 
 RLT.NAME    = "Raid Loot Suite"
-RLT.VERSION = "2.6.3"
+RLT.VERSION = "2.7.1"
 RLT.AUTHOR  = "Saranwrap"
-RLT.PREFIX  = "|cfffc7a2bRaid Loot Suite|r"
+RLT.PREFIX  = "|cffffd100Raid Loot Suite|r"
 RLT.TRASH   = "Trash"
 RLT.UNKNOWN = "Unknown"
 

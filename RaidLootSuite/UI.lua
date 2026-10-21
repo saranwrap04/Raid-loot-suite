@@ -10,20 +10,22 @@ local FRAME_W, FRAME_H = 820, 530
 local MIN_W, MIN_H = 820, 400
 local MAX_W, MAX_H = 1800, 1200
 
--- flat dark style: dark backdrop, black borders, orange accent
+-- flat dark style: dark backdrop, black borders, gold accent (Kit.lua)
+local K = RLT.Kit
 local C = {
-    bg       = { 0.06, 0.06, 0.06, 0.92 },
-    panel    = { 0.10, 0.10, 0.10, 1 },
-    border   = { 0, 0, 0, 1 },
-    button   = { 0.10, 0.10, 0.10, 1 },
-    accent   = { 0.99, 0.48, 0.17, 1 },
+    bg       = K.C.bg,
+    panel    = K.C.panel,
+    input    = K.C.input,
+    border   = K.C.border,
+    button   = K.C.button,
+    accent   = K.C.accent,
     muted    = { 0.55, 0.55, 0.60 },
-    danger   = { 0.90, 0.30, 0.30, 1 },
+    danger   = K.C.danger,
     title    = { 0.10, 0.10, 0.10, 1 },
     header   = { 0.13, 0.13, 0.13, 1 },
-    sel      = { 0.45, 0.22, 0.08, 1 },
+    sel      = K.C.sel,
 }
-RLT.ACCENT = "|cfffc7a2b"
+RLT.ACCENT = K.ACCENT
 
 
 local RAID_ABBREV = {
@@ -72,10 +74,16 @@ local function FlatButton(parent, label, w, h, danger)
     local b = CreateFrame("Button", nil, parent)
     Size(b, w, h or 22)
     Backdrop(b, C.button)
-    local fs = Text(b)
+    local fs = Text(b, "GameFontNormalSmall")
     fs:SetPoint("CENTER")
+    fs:SetTextColor(C.accent[1], C.accent[2], C.accent[3])
     b:SetFontString(fs)
     b:SetText(label)
+    -- selected (tab, mode): lighter box and white text
+    function b:SetSelected(on)
+        self:SetBackdropColor(unpack(on and C.sel or C.button))
+        if on then fs:SetTextColor(1, 1, 1) else fs:SetTextColor(C.accent[1], C.accent[2], C.accent[3]) end
+    end
     local hover = danger and C.danger or C.accent
     b:SetScript("OnEnter", function(self)
         self:SetBackdropBorderColor(unpack(hover))
@@ -94,14 +102,8 @@ local function FlatButton(parent, label, w, h, danger)
     return b
 end
 
-local menuFrame = CreateFrame("Frame", "RaidLootSuiteMenu", UIParent, "UIDropDownMenuTemplate")
-local function ShowMenu(menu, anchor)
-    if anchor then
-        EasyMenu(menu, menuFrame, anchor, 0, 0, "MENU")
-    else
-        EasyMenu(menu, menuFrame, "cursor", 0, 0, "MENU")
-    end
-end
+RLT.MENU_NAME = "RaidLootSuiteMenu"
+local function ShowMenu(menu, anchor) K.ShowMenu(menu, anchor) end
 
 local QUALITY_HEX = {
     [0] = "|cff9d9d9d", [1] = "|cffffffff", [2] = "|cff1eff00", [3] = "|cff0070dd",
@@ -381,7 +383,7 @@ local function CreateRow(parent, i)
         if col.key == "sync" then
             -- ticked = shared when others sync (default); unticked = kept out of syncs
             local cb = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
-            Size(cb, 18, 18)
+            K.SkinCheck(cb)
             cb:SetHitRectInsets(0, 0, 0, 0)
             cb:SetScript("OnClick", function(self)
                 local e = row.entry
@@ -734,150 +736,6 @@ end
 ---------------------------------------------------------------------------
 -- Options panel
 ---------------------------------------------------------------------------
-local function CheckBox(parent, name, label, desc, y, getter, setter)
-    local cb = CreateFrame("CheckButton", name, parent, "UICheckButtonTemplate")
-    Size(cb, 24, 24)
-    cb:SetPoint("TOPLEFT", parent, "TOPLEFT", 20, y)
-    _G[name .. "Text"]:SetText(label)
-    _G[name .. "Text"]:SetFontObject("GameFontHighlight")
-    local d = Text(parent, "GameFontDisableSmall")
-    d:SetPoint("TOPLEFT", cb, "BOTTOMLEFT", 28, 4)
-    d:SetWidth(350)           -- stays left of the right column; long text wraps
-    d:SetJustifyH("LEFT")
-    d:SetText(desc)
-    cb:SetScript("OnShow", function(self) self:SetChecked(getter()) end)
-    cb:SetScript("OnClick", function(self) setter(self:GetChecked() and true or false) end)
-    return cb
-end
-
-function UI:CreateOptions(parent)
-    -- No background of its own: it sits on the list panel, whose rows are hidden while it is open.
-    local o = CreateFrame("Frame", nil, parent)
-    o:SetAllPoints(self.list)
-    o:SetFrameLevel(self.list:GetFrameLevel() + 10)
-    o:EnableMouse(true)
-    o:Hide()
-
-    local title = Text(o, "GameFontNormalLarge")
-    title:SetPoint("TOPLEFT", 20, -16)
-    title:SetText("History & window")
-    title:SetTextColor(unpack(C.accent))
-
-    local s = RLT.db.settings
-
-    -- Left column
-    local qLabel = Text(o, "GameFontHighlight")
-    qLabel:SetPoint("TOPLEFT", 24, -56)
-    qLabel:SetText("Minimum item quality:")
-    local qBtn = FlatButton(o, "", 130, 22)
-    qBtn:SetPoint("LEFT", qLabel, "RIGHT", 12, 0)
-    local function UpdateQ()
-        qBtn:SetText(QualityHex(s.minQuality) .. (QUALITY_NAMES[s.minQuality] or "?") .. "|r")
-    end
-    qBtn:SetScript("OnShow", UpdateQ)
-    qBtn:SetScript("OnClick", function(self)
-        local menu = { { text = "Minimum quality", isTitle = true, notCheckable = true } }
-        for q = 2, 5 do
-            menu[#menu + 1] = {
-                text = QualityHex(q) .. QUALITY_NAMES[q] .. "|r", checked = s.minQuality == q,
-                func = function() s.minQuality = q; UpdateQ() end,
-            }
-        end
-        ShowMenu(menu, self)
-    end)
-
-    CheckBox(o, "RLTOptRaidOnly", "Only record inside raid instances",
-        "Ignore loot in dungeons and the open world.", -90,
-        function() return s.onlyInRaid end, function(v) s.onlyInRaid = v end)
-    CheckBox(o, "RLTOptTrash", "Record trash drops",
-        "Items that cannot be tied to a boss are saved with the boss name \"Trash\".", -135,
-        function() return s.trackTrash end, function(v) s.trackTrash = v end)
-    CheckBox(o, "RLTOptAnnounce", "Chat message when loot is recorded",
-        "Prints \"[Item] -> Player (Boss)\" in your chat frame (only you see it).", -180,
-        function() return s.announce end, function(v) s.announce = v end)
-    CheckBox(o, "RLTOptMinimap", "Show minimap button",
-        "Drag the button to move it around the minimap.", -225,
-        function() return not s.minimap.hide end,
-        function(v) s.minimap.hide = not v; RLT:UpdateMinimapButton() end)
-    CheckBox(o, "RLTOptAutoSync", "Auto sync (after a login / reload, or when you join a raid)",
-        "Fills in drops you missed while disconnected. The Sync button in the History always works.", -270,
-        function() return s.autoSync end, function(v) s.autoSync = v end)
-
-    -- Right column: opacity slider
-    local slider = CreateFrame("Slider", "RLTOptOpacity", o, "OptionsSliderTemplate")
-    Size(slider, 240, 17)
-    slider:SetPoint("TOPLEFT", o, "TOPLEFT", 440, -72)
-    slider:SetMinMaxValues(0.2, 1)
-    slider:SetValueStep(0.05)
-    _G["RLTOptOpacityLow"]:SetText("20%")
-    _G["RLTOptOpacityHigh"]:SetText("100%")
-    local sliderText = _G["RLTOptOpacityText"]
-    sliderText:SetFontObject("GameFontHighlight")
-    local function UpdateSliderText()
-        sliderText:SetText(string.format("Window opacity: %d%%", math.floor(s.opacity * 100 + 0.5)))
-    end
-    slider:SetScript("OnShow", function(self) self:SetValue(s.opacity); UpdateSliderText() end)
-    slider:SetScript("OnValueChanged", function(_, value)
-        value = math.floor(value * 20 + 0.5) / 20 -- snap to 5%
-        if value < 0.2 then value = 0.2 elseif value > 1 then value = 1 end
-        s.opacity = value
-        UpdateSliderText()
-        UI:ApplyOpacity()
-    end)
-    local sDesc = Text(o, "GameFontDisableSmall")
-    sDesc:SetPoint("TOPLEFT", slider, "BOTTOMLEFT", 0, -16)
-    sDesc:SetText("Background transparency. Text and icons stay fully visible.")
-
-    local info = Text(o, "GameFontDisableSmall")
-    info:SetPoint("TOPLEFT", slider, "BOTTOMLEFT", 0, -50)
-    info:SetWidth(300)
-    info:SetJustifyH("LEFT")
-    info:SetText("Drag the bottom-right corner of the window to resize it.\n\n" ..
-                 "Your history is saved in\nWTF\\Account\\<ACCOUNT>\\SavedVariables\\RaidLootSuite.lua\n" ..
-                 "It is written when you log out or /reload.\n\nRaid Loot Suite v" .. RLT.VERSION .. " by " .. RLT.AUTHOR .. ".")
-
-    -- Links: icon + the URL in a read-only box (click it, Ctrl+A, Ctrl+C)
-    local linkLabel = Text(o, "GameFontNormal")
-    linkLabel:SetPoint("TOPLEFT", info, "BOTTOMLEFT", 0, -18)
-    linkLabel:SetText("Links (click a box, Ctrl+A then Ctrl+C to copy)")
-    local function LinkBox(anchor, url, icon)
-        local lead = o:CreateTexture(nil, "ARTWORK")
-        Size(lead, 16, 16)
-        lead:SetTexture(RLT.MEDIA .. icon)
-        lead:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -10)
-        local box = CreateFrame("EditBox", nil, o)
-        box:SetPoint("LEFT", lead, "RIGHT", 8, 0)
-        Size(box, 300, 16)
-        box:SetFontObject(GameFontHighlightSmall)
-        box:SetAutoFocus(false)
-        box:SetText(url)
-        box:SetCursorPosition(0)
-        box:SetScript("OnTextChanged", function(self, userInput) if userInput then self:SetText(url) end end)
-        box:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
-        box:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-        return lead
-    end
-    local gh = LinkBox(linkLabel, "https://github.com/saranwrap04/Raid-loot-suite", "github")
-    LinkBox(gh, "https://warperia.com/addon-wotlk/raid-loot-suite/", "warperia")
-
-    self.options = o
-end
-
-function UI:SetOptionsShown(show)
-    if show then
-        self.options:Show()
-        self.rowHolder:Hide()
-        self.scroll:Hide()
-        self.empty:Hide()
-    else
-        self.options:Hide()
-        self.rowHolder:Show()
-        self.scroll:Show()
-        self:UpdateRows()
-    end
-    if self.optionsBtn then self.optionsBtn:SetText(show and "Back to list" or "Settings") end
-end
-
 -- Applies the opacity setting to every window background.
 function UI:ApplyOpacity()
     local a = RLT.db.settings.opacity or 0.95
@@ -975,10 +833,12 @@ function UI:Create()
     end)
 
     self.raidBtn = FlatButton(f, "Raid: All", 170, 22)
+    K.Arrow(self.raidBtn)
     self.raidBtn:SetPoint("LEFT", search, "RIGHT", 8, 0)
     self.raidBtn:SetScript("OnClick", function(b) ShowMenu(RaidMenu(), b) end)
 
     self.periodBtn = FlatButton(f, "Period: All time", 150, 22)
+    K.Arrow(self.periodBtn)
     self.periodBtn:SetPoint("LEFT", self.raidBtn, "RIGHT", 8, 0)
     self.periodBtn:SetScript("OnClick", function(b) ShowMenu(PeriodMenu(), b) end)
 
@@ -1106,8 +966,6 @@ function UI:Create()
         UI:Layout()
     end)
 
-    self:CreateOptions(f)
-
     f:SetScript("OnSizeChanged", function() UI:Layout() end)
     f:SetScript("OnShow", function() UI:Layout(); UI:Refresh() end)
     self:ApplyOpacity()
@@ -1123,7 +981,7 @@ function UI:FillExport()
     self.exportBox:SetCursorPosition(0)
     self.exportInfo:SetText(n .. " entries  -  click in the box, press Ctrl+C, then paste into Excel, Google Sheets or Discord.")
     for fmt, b in pairs(self.formatBtns) do
-        if fmt == self.exportFormat then b:SetBackdropColor(unpack(C.sel)) else b:SetBackdropColor(unpack(C.button)) end
+        b:SetSelected(fmt == self.exportFormat)
     end
 end
 

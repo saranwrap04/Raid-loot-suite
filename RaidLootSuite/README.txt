@@ -1,4 +1,4 @@
-RAID LOOT SUITE v2.6.3
+RAID LOOT SUITE v2.7.1
 Loot history, soft reserves, SR / MS / OS rolls, loot council and raid loot tables (WoW 3.3.5a).
 By Saranwrap
 
@@ -93,7 +93,7 @@ HISTORY
   - Winners come from "<player> receives loot" lines. Drops seen in the loot window show
     "Pending..." until someone loots them.
   - Default: epic and better, inside raids, trash included. Emblems, Abyss Crystals and
-    Frozen Orbs are ignored (Settings > History & window).
+    Frozen Orbs are ignored (Settings > Recording).
   - Search, Raid and Period filters, click a column title to sort.
   - Row: hover = tooltip, shift-click = link, ctrl-click = try on,
     right-click = edit winner / boss / note, mark as MS / OS / SR / DE, delete.
@@ -110,7 +110,7 @@ HISTORY
   - Sync: gets the loot other raid members recorded in the last 7 days and fills in what
     you missed (disconnected, too far away). They need Raid Loot Suite. Auto sync also runs
     it once after a login, a /reload or when you join a raid (turn it off in Settings >
-    History & window).
+    Recording).
     A drop someone changed (winner, MS / OS, LC / SR, note, boss) is recognised as the same
     drop, not added twice: the most recent change wins. Both players need version 2.6.1 or
     later for a changed winner to be recognised.
@@ -133,11 +133,18 @@ LOOT TABLES
 
 
 SETTINGS
-  Loot session: test mode, roll timer, announce channels (roll start, winners, countdown),
-  auto-queue, post boss loot in raid chat, give with Master Loot, countdown, whisper SR,
-  whisper MS / OS, disenchanter (+ give no-roll items to the disenchanter), council members.
-  History & window: minimum quality, raids only, trash drops, chat line when loot is
-  recorded, minimap button, auto sync, window opacity, links.
+  Categories in a side bar on the left; hover an option to see what it does.
+  Rolls: roll timer, countdown 5-4-3-2-1, soft reserves per player, whisper "sr [item]",
+    test mode.
+  Announcements: channel for the roll start, the winners and the countdown; post the boss
+    loot in raid chat.
+  Master looter: add boss loot to the queue, give with Master Loot when awarded,
+    disenchanter (+ give no-roll items to the disenchanter).
+  Loot council: council members, whisper MS / OS / pass.
+  Recording: minimum item quality, raids only, trash drops, chat line when loot is
+    recorded, auto sync.
+  Window: window opacity, minimap button.
+  Commands and links.
   Raid warning needs leader or assist, otherwise raid chat is used.
 
 

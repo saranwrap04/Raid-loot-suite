@@ -2,10 +2,11 @@
 ## Title: Raid Loot Suite
 ## Notes: Loot history, SR / MS / OS rolls, loot council and an active loot queue.
 ## Author: Saranwrap
-## Version: 2.6.3
+## Version: 2.7.1
 ## SavedVariables: RaidLootSuiteDB, RaidLootTrackerDB
 
 Core.lua
+Kit.lua
 Import.lua
 Session.lua
 Sync.lua
@@ -14,4 +15,5 @@ UI.lua
 SessionUI.lua
 LootData.lua
 LootUI.lua
+Options.lua
 Main.lua
