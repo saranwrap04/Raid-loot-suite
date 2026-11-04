@@ -1,4 +1,4 @@
-RAID LOOT SUITE v2.7.1
+RAID LOOT SUITE v2.7.2
 Loot history, soft reserves, SR / MS / OS rolls, loot council and raid loot tables (WoW 3.3.5a).
 By Saranwrap
 
@@ -90,8 +90,10 @@ LOOT COUNCIL
 
 HISTORY
   Records item, boss, winner, date and time, raid and size/difficulty.
-  - Winners come from "<player> receives loot" lines. Drops seen in the loot window show
-    "Pending..." until someone loots them.
+  - Winners come from "<player> receives loot" lines and, for group loot rolls (Need / Greed /
+    Disenchant), from "<player> won:" lines. Drops are seen in the loot window or in the roll
+    window, so they are recorded even when someone else opened the boss first. They show
+    "Pending..." until someone wins or loots them. Chat shows "Dropped" and "item -> winner".
   - Default: epic and better, inside raids, trash included. Emblems, Abyss Crystals and
     Frozen Orbs are ignored (Settings > Recording).
   - Search, Raid and Period filters, click a column title to sort.

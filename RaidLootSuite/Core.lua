@@ -15,7 +15,7 @@ RLT.FOLDER = ADDON_NAME or "RaidLootSuite"
 RLT.MEDIA = "Interface\\AddOns\\" .. RLT.FOLDER .. "\\textures\\"
 
 RLT.NAME    = "Raid Loot Suite"
-RLT.VERSION = "2.7.1"
+RLT.VERSION = "2.7.2"
 RLT.AUTHOR  = "Saranwrap"
 RLT.PREFIX  = "|cffffd100Raid Loot Suite|r"
 RLT.TRASH   = "Trash"
@@ -273,6 +273,47 @@ function RLT:ParseLootMessage(msg)
     end
 end
 
+-- Group loot (Need / Greed / Disenchant): "<player> won: [item]". The server does not always
+-- add a "receives loot" line after a roll, so this is the message that names the winner.
+local WON_PATTERNS = {}
+local function AddWonPattern(fmt, isSelf, de)
+    if type(fmt) ~= "string" then return end
+    local p, o = RLT.BuildPattern(fmt)
+    tinsert(WON_PATTERNS, { pattern = p, order = o, isSelf = isSelf, de = de })
+end
+
+function RLT:BuildWonPatterns()
+    wipe(WON_PATTERNS)
+    -- the more specific strings first, the plain "won:" ones last ("You won" before "%s won")
+    AddWonPattern(LOOT_ROLL_YOU_WON_NO_SPAM_DE, true, true)
+    AddWonPattern(LOOT_ROLL_YOU_WON_NO_SPAM_GREED, true)
+    AddWonPattern(LOOT_ROLL_YOU_WON_NO_SPAM_NEED, true)
+    AddWonPattern(LOOT_ROLL_WON_NO_SPAM_DE, false, true)
+    AddWonPattern(LOOT_ROLL_WON_NO_SPAM_GREED, false)
+    AddWonPattern(LOOT_ROLL_WON_NO_SPAM_NEED, false)
+    AddWonPattern(LOOT_ROLL_YOU_WON, true)
+    AddWonPattern(LOOT_ROLL_WON, false)
+end
+
+-- Returns winner, itemLink, disenchanted (or nil if the message is not a roll result).
+function RLT:ParseWonMessage(msg)
+    for _, wp in ipairs(WON_PATTERNS) do
+        local caps = { msg:match(wp.pattern) }
+        if caps[1] then
+            local who, link
+            for _, v in ipairs(caps) do
+                if v:find("|Hitem:", 1, true) then
+                    link = link or v:match("|c%x+|Hitem:.-|h.-|h|r")
+                elseif not who and not v:match("^%d+$") then
+                    who = v
+                end
+            end
+            if wp.isSelf then who = UnitName("player") end
+            if who and link then return who, link, wp.de end
+        end
+    end
+end
+
 ---------------------------------------------------------------------------
 -- Data
 ---------------------------------------------------------------------------
@@ -436,6 +477,38 @@ end
 local openedSources = {} -- loot sources already read this session
 local trashSeen = {}     -- itemID -> count of trash drops seen in a loot window (not recorded)
 
+-- Where does the loot that is showing up come from? Returns a boss name, the trash label,
+-- or nil when it cannot be told (the caller then decides what to do with it).
+function RLT:GuessLootSource()
+    local now = time()
+    local boss = self:ResolveBoss()
+    -- a normal mob that died well after the last boss kill: its loot is not the boss's
+    if not (lastKill and boss == lastKill.name and now - lastKill.t <= 60)
+        and UnitExists("target") and UnitIsDead("target") and not UnitIsPlayer("target") then
+        local guid = UnitGUID("target")
+        if not (guid and bossCache[guid]) and not IsBossUnit("target") then
+            return self.TRASH
+        end
+    end
+    return boss
+end
+
+-- Pending drop (no winner yet) of this item from the same boss, seen less than 5 minutes ago,
+-- that the other source (loot window / roll window) has not matched yet.
+local function FindPending(entries, id, boss, now, flag)
+    for i = #entries, 1, -1 do
+        local e = entries[i]
+        if now - (e.ts or 0) > 300 then break end
+        if e.pending and e.itemID == id and e.boss == boss and not e[flag] then return e end
+    end
+end
+
+local function DropSeen(self, e)
+    if self.db.settings.announce then
+        self:Print(string.format("Dropped: %s |cff888888(%s)|r", e.itemLink, e.boss or "?"))
+    end
+end
+
 -- The looter (master looter or whoever opens the corpse/chest) sees every item that dropped.
 function RLT:LOOT_OPENED()
     if self.OnLootOpenedSession then self:OnLootOpenedSession() end
@@ -463,6 +536,7 @@ function RLT:LOOT_OPENED()
     if isTrash then boss = self.TRASH end
 
     local found = false
+    local now = time()
     for slot = 1, GetNumLootItems() do
         if LootSlotIsItem(slot) then
             local link = GetLootSlotLink(slot)
@@ -474,10 +548,17 @@ function RLT:LOOT_OPENED()
                 if (quality or 0) >= s.minQuality then trashSeen[id] = (trashSeen[id] or 0) + 1 end
                 found = true
             elseif id and not self.IGNORED_ITEMS[id] and (quality or 0) >= s.minQuality then
-                self:AddEntry({
-                    itemLink = link, itemID = id, itemName = name, quality = quality,
-                    boss = boss, pending = true,
-                })
+                -- group loot: the roll window may already have recorded this item
+                local rolled = FindPending(self.db.entries, id, boss, now, "windowSeen")
+                if rolled and rolled.rollSeen then
+                    rolled.windowSeen = true
+                else
+                    local e = self:AddEntry({
+                        itemLink = link, itemID = id, itemName = name, quality = quality,
+                        boss = boss, pending = true, windowSeen = true,
+                    })
+                    DropSeen(self, e)
+                end
                 found = true
             end
         end
@@ -485,38 +566,97 @@ function RLT:LOOT_OPENED()
     if found then openedSources[key] = true end
 end
 
--- Everybody in the group sees "<player> receives loot: [item]."
+local seenRolls = {} -- rollID -> time
+
+-- Group loot: every eligible raider gets the roll window, whoever opened the corpse.
+-- That is how a drop is seen when somebody else clicked the boss first.
+function RLT:START_LOOT_ROLL(rollID)
+    if not rollID or not self:ShouldTrack() then return end
+    local now = time()
+    if seenRolls[rollID] and now - seenRolls[rollID] < 120 then return end
+    local link = GetLootRollItemLink and GetLootRollItemLink(rollID)
+    if not link then return end
+    seenRolls[rollID] = now
+    local s = self.db.settings
+    local id, name, q = self:ParseLink(link)
+    local _, _, _, quality = GetLootRollItemInfo(rollID)
+    quality = quality or q
+    if not id or self.IGNORED_ITEMS[id] or (quality or 0) < s.minQuality then return end
+
+    local boss = self:GuessLootSource()
+    if boss == self.TRASH and not s.trackTrash then
+        trashSeen[id] = (trashSeen[id] or 0) + 1 -- keep the winner line from going to the last boss
+        return
+    end
+    boss = boss or (s.trackTrash and self.TRASH) or nil
+    if not boss then return end
+
+    -- already read from the loot window (you opened the corpse yourself)
+    local opened = FindPending(self.db.entries, id, boss, now, "rollSeen")
+    if opened and opened.windowSeen then
+        opened.rollSeen = true
+        return
+    end
+    local e = self:AddEntry({
+        itemLink = link, itemID = id, itemName = name, quality = quality,
+        boss = boss, pending = true, rollSeen = true,
+    })
+    DropSeen(self, e)
+end
+
+local recentWinner = {} -- "name:itemID" -> { t, viaRoll }: the same drop can be reported twice
+
+-- Everybody in the group sees "<player> receives loot: [item]." and, for group loot
+-- rolls, "<player> won: [item]".
 function RLT:CHAT_MSG_LOOT(msg)
     if not self:ShouldTrack() then return end
     local who, link = self:ParseLootMessage(msg)
+    local viaRoll, disenchanted = false, nil
+    if not who then
+        who, link, disenchanted = self:ParseWonMessage(msg)
+        viaRoll = who ~= nil
+    end
     if not who then return end
     local id, name, quality = self:ParseLink(link)
     if not id or self.IGNORED_ITEMS[id] or (quality or 0) < self.db.settings.minQuality then return end
 
     local now = time()
     local entries = self.db.entries
-    if self.OnItemReceived then self:OnItemReceived(who, id) end
-    -- An item awarded through the loot session is now actually in the winner's bags
-    for i = #entries, 1, -1 do
-        local e = entries[i]
-        if now - (e.ts or 0) > 3600 then break end
-        if e.awarded and not e.delivered and e.itemID == id and (e.winner == who or e.winner == "Disenchanted") then
-            e.delivered = now
-            self:NotifyChanged()
-            return
+    local rkey = strlower(who) .. ":" .. id
+    -- "X won" and "X receives loot" for the same item: only the first one counts
+    local r = recentWinner[rkey]
+    if r and not r.used and r.viaRoll ~= viaRoll and now - r.t <= 10 then
+        r.used = true
+        return
+    end
+    recentWinner[rkey] = { t = now, viaRoll = viaRoll }
+
+    if not viaRoll then
+        if self.OnItemReceived then self:OnItemReceived(who, id) end
+        -- An item awarded through the loot session is now actually in the winner's bags
+        for i = #entries, 1, -1 do
+            local e = entries[i]
+            if now - (e.ts or 0) > 3600 then break end
+            if e.awarded and not e.delivered and e.itemID == id and (e.winner == who or e.winner == "Disenchanted") then
+                e.delivered = now
+                self:NotifyChanged()
+                return
+            end
         end
     end
-    -- Assign the winner to a drop already seen in the loot window
+    -- Assign the winner to a drop already seen in the loot window or the roll window
     for i = #entries, 1, -1 do
         local e = entries[i]
         if now - (e.ts or 0) > 3600 then break end
         if e.pending and e.itemID == id then
-            e.pending = nil
+            e.pending, e.rollSeen, e.windowSeen = nil, nil, nil
             e.winner = who
             e.class = self:GetClassForName(who)
             e.awardedTs = now
+            if disenchanted then e.spec = "DE" end
             if self.db.settings.announce then
-                self:Print(string.format("%s -> %s |cff888888(%s)|r", e.itemLink, who, e.boss or "?"))
+                self:Print(string.format("%s -> %s%s |cff888888(%s)|r", e.itemLink, who,
+                    disenchanted and " (disenchanted)" or "", e.boss or "?"))
             end
             self:NotifyChanged()
             return
@@ -536,6 +676,7 @@ function RLT:CHAT_MSG_LOOT(msg)
     self:AddEntry({
         itemLink = link, itemID = id, itemName = name, quality = quality,
         boss = boss, winner = who, class = self:GetClassForName(who),
+        spec = disenchanted and "DE" or nil,
     })
 end
 
@@ -686,8 +827,9 @@ function RLT:ADDON_LOADED(name)
     self.db = db
 
     self:BuildLootPatterns()
+    self:BuildWonPatterns()
 
-    for _, ev in ipairs({ "CHAT_MSG_LOOT", "LOOT_OPENED", "COMBAT_LOG_EVENT_UNFILTERED",
+    for _, ev in ipairs({ "CHAT_MSG_LOOT", "LOOT_OPENED", "START_LOOT_ROLL", "COMBAT_LOG_EVENT_UNFILTERED",
                           "PLAYER_TARGET_CHANGED", "UPDATE_MOUSEOVER_UNIT", "UNIT_TARGET",
                           "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_LOGOUT",
                           "CHAT_MSG_SYSTEM", "CHAT_MSG_WHISPER", "CHAT_MSG_ADDON",
